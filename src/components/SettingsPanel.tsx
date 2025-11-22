@@ -6,13 +6,15 @@ export function SettingsPanel() {
     const [apiKey, setApiKey] = useState('');
     const [showKey, setShowKey] = useState(false);
     const [status, setStatus] = useState<'idle' | 'saved' | 'cleared'>('idle');
-    const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+    const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
     const [signatoryName, setSignatoryName] = useState('');
     const [signatoryTitle, setSignatoryTitle] = useState('');
     const [signatoryPlace, setSignatoryPlace] = useState('');
     const [emergencyPhone, setEmergencyPhone] = useState('');
+    const [offerorName, setOfferorName] = useState('');
 
     const MODELS = [
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Newest fast model. Best for suggestions.' },
         { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and cost-effective. Good for general tasks.' },
         { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'High performance. Best for complex reasoning.' },
         { id: 'gemini-2.0-flash-thinking-exp-01-21', name: 'Gemini 2.0 Flash Thinking', description: 'Enhanced reasoning capabilities.' },
@@ -44,6 +46,10 @@ export function SettingsPanel() {
         if (storedPhone) {
             setEmergencyPhone(storedPhone);
         }
+        const storedOfferor = localStorage.getItem('default_offeror_name');
+        if (storedOfferor) {
+            setOfferorName(storedOfferor);
+        }
     }, []);
 
     const handleSave = () => {
@@ -54,6 +60,7 @@ export function SettingsPanel() {
             localStorage.setItem('default_signatory_title', signatoryTitle.trim());
             localStorage.setItem('default_signatory_place', signatoryPlace.trim());
             localStorage.setItem('default_emergency_phone', emergencyPhone.trim());
+            localStorage.setItem('default_offeror_name', offerorName.trim());
             setStatus('saved');
             setTimeout(() => setStatus('idle'), 2000);
         }
@@ -66,12 +73,14 @@ export function SettingsPanel() {
         localStorage.removeItem('default_signatory_title');
         localStorage.removeItem('default_signatory_place');
         localStorage.removeItem('default_emergency_phone');
+        localStorage.removeItem('default_offeror_name');
         setApiKey('');
-        setSelectedModel('gemini-1.5-flash');
+        setSelectedModel('gemini-2.5-flash');
         setSignatoryName('');
         setSignatoryTitle('');
         setSignatoryPlace('');
         setEmergencyPhone('');
+        setOfferorName('');
         setStatus('cleared');
         setTimeout(() => setStatus('idle'), 2000);
     };
@@ -174,6 +183,16 @@ export function SettingsPanel() {
                                 value={emergencyPhone}
                                 onChange={(e) => setEmergencyPhone(e.target.value)}
                                 placeholder="e.g. +1 800-555-0199"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Offeror Name</label>
+                            <input
+                                type="text"
+                                value={offerorName}
+                                onChange={(e) => setOfferorName(e.target.value)}
+                                placeholder="e.g. ABC Logistics Inc."
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                             />
                         </div>

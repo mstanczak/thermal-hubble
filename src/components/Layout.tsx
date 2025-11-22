@@ -1,11 +1,12 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Settings } from 'lucide-react';
 
 interface LayoutProps {
     children: React.ReactNode;
+    onSettingsClick?: () => void;
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, onSettingsClick }: LayoutProps) {
     return (
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -21,6 +22,15 @@ export function Layout({ children }: LayoutProps) {
                     <nav className="flex items-center gap-4">
                         <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900">Documentation</a>
                         <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900">Support</a>
+                        {onSettingsClick && (
+                            <button
+                                onClick={onSettingsClick}
+                                className="text-gray-600 hover:text-gray-900 p-1 rounded-md hover:bg-gray-100 transition-colors"
+                                title="Settings"
+                            >
+                                <Settings className="w-5 h-5" />
+                            </button>
+                        )}
                     </nav>
                 </div>
             </header>

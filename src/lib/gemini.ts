@@ -3,11 +3,8 @@ import type { HazmatFormData } from "./validation";
 import { REGULATION_RULES } from "../data/regulations";
 import { createWorker } from 'tesseract.js';
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
 // Set worker source for pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 export interface ValidationIssue {
   description: string;
@@ -245,5 +242,58 @@ async function extractDataFromText(text: string, apiKey: string): Promise<Partia
     console.error("JSON Parse Error", e);
     console.error("Raw Text", responseText);
     throw new Error("Failed to parse extracted data as JSON.");
+  }
+}
+
+export interface Suggestion {
+  value: string;
+  confidence: number;
+  reasoning: string;
+}
+
+export async function getFieldSuggestions(
+  data: HazmatFormData,
+  fieldName: string,
+  apiKey: string,
+  modelId: string = "gemini-1.5-flash"
+): Promise<Suggestion[]> {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: modelId });
+
+    const prompt = `
+      You are a hazmat shipping expert. Based on the current shipment details, suggest the most likely values for the "${fieldName}" field.
+      
+      Current Form Data:
+      - Carrier: ${data.carrier}
+      - Mode: ${data.mode}
+      - UN Number: ${data.unNumber}
+      - Proper Shipping Name: ${data.properShippingName}
+      - Hazard Class: ${data.hazardClass}
+      - Packing Group: ${data.packingGroup}
+      - Quantity: ${data.quantity} ${data.quantityUnit}
+      
+      Provide 1-3 recommendations for "${fieldName}".
+      Sort by confidence (highest first).
+      
+      Return ONLY a JSON array of objects with this structure:
+      [
+        {
+          "value": "suggested value",
+          "confidence": number (0-100),
+          "reasoning": "brief explanation why"
+        }
+      ]
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    const jsonString = text.replace(/```json\n|\n```/g, "").trim();
+    return JSON.parse(jsonString) as Suggestion[];
+  } catch (error) {
+    console.error("Suggestion Error:", error);
+    return [];
   }
 }

@@ -4,18 +4,24 @@ import { hazmatFormSchema, type HazmatFormData } from '../lib/validation';
 import { CARRIERS, MODES, SERVICE_TYPES, COMMON_UN_NUMBERS } from '../data/regulations';
 import { HAZARD_CLASSES } from '../data/hazardClasses';
 import { PACKING_INSTRUCTIONS } from '../data/packingInstructions';
-import { validateShipmentWithGemini, type ValidationResult } from '../lib/gemini';
+import { validateShipmentWithGemini, getFieldSuggestions, type ValidationResult, type Suggestion } from '../lib/gemini';
 import { ValidationResultCard } from './ValidationResult';
-import { CheckCircle, Plane, Truck, Loader2, AlertCircle, Info } from 'lucide-react';
+import { CheckCircle, Plane, Truck, Loader2, AlertCircle, Info, Sparkles, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { SDSUpload } from './SDSUpload';
-
+import { ApiKeyModal } from './ApiKeyModal';
 export function HazmatForm() {
     const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [apiError, setApiError] = useState<string | null>(null);
     const [confidenceScores, setConfidenceScores] = useState<Record<string, number>>({});
+    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+
+    // Suggestion State
+    const [activeSuggestionField, setActiveSuggestionField] = useState<string | null>(null);
+    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [isSuggesting, setIsSuggesting] = useState(false);
 
     const {
         register,
@@ -108,6 +114,16 @@ export function HazmatForm() {
         }
     }, [setValue, watch]);
 
+    // Load default offeror name when Ground mode is selected
+    useEffect(() => {
+        if (selectedMode === 'Ground') {
+            const defaultOfferor = localStorage.getItem('default_offeror_name');
+            if (defaultOfferor && !watch('offerorName')) {
+                setValue('offerorName', defaultOfferor);
+            }
+        }
+    }, [selectedMode, setValue, watch]);
+
     const onSubmit = async (data: HazmatFormData) => {
         setApiError(null);
         setValidationResult(null);
@@ -118,7 +134,7 @@ export function HazmatForm() {
             const modelId = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
 
             if (!apiKey) {
-                setApiError("Gemini API Key is missing. Please configure it in the settings panel.");
+                setShowApiKeyModal(true);
                 setIsLoading(false);
                 return;
             }
@@ -133,19 +149,119 @@ export function HazmatForm() {
         }
     };
 
+    const handleGetSuggestions = async (fieldName: string) => {
+        setActiveSuggestionField(fieldName);
+        setIsSuggesting(true);
+        setSuggestions([]);
+
+        try {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            const modelId = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
+
+            if (!apiKey) {
+                setShowApiKeyModal(true);
+                setActiveSuggestionField(null);
+                return;
+            }
+
+            const currentData = watch();
+            const results = await getFieldSuggestions(currentData, fieldName, apiKey, modelId);
+            setSuggestions(results);
+        } catch (error) {
+            console.error("Failed to get suggestions", error);
+        } finally {
+            setIsSuggesting(false);
+        }
+    };
+
+    const applySuggestion = (fieldName: string, value: string) => {
+        setValue(fieldName as any, value);
+        setActiveSuggestionField(null);
+        setSuggestions([]);
+        // Optimistically update confidence to 100 (user selected it)
+        setConfidenceScores(prev => ({ ...prev, [fieldName]: 100 }));
+    };
+
     const renderConfidenceBadge = (fieldName: string) => {
         const score = confidenceScores[fieldName];
-        if (score === undefined) return null;
-
-        let colorClass = 'bg-gray-100 text-gray-600';
-        if (score >= 80) colorClass = 'bg-green-100 text-green-700';
-        else if (score >= 50) colorClass = 'bg-yellow-100 text-yellow-700';
-        else colorClass = 'bg-red-100 text-red-700';
+        const showSuggestionBtn = score === undefined || score < 80;
 
         return (
-            <span className={clsx("text-xs px-2 py-0.5 rounded-full ml-2 font-medium", colorClass)} title={`AI Confidence: ${score}%`}>
-                {score}% AI
-            </span>
+            <div className="inline-flex items-center ml-2 relative">
+                {score !== undefined && (
+                    <span className={clsx(
+                        "text-xs px-2 py-0.5 rounded-full font-medium mr-1",
+                        score >= 80 ? "bg-green-100 text-green-700" :
+                            score >= 50 ? "bg-yellow-100 text-yellow-700" :
+                                "bg-red-100 text-red-700"
+                    )} title={`AI Confidence: ${score}%`}>
+                        {score}%
+                    </span>
+                )}
+
+                {showSuggestionBtn && (
+                    <button
+                        type="button"
+                        onClick={() => handleGetSuggestions(fieldName)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                        title="Get AI Suggestions"
+                    >
+                        <Sparkles className="w-3.5 h-3.5" />
+                    </button>
+                )}
+
+                {/* Suggestion Popup */}
+                {activeSuggestionField === fieldName && (
+                    <div className="absolute z-50 left-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-3 py-2 border-b border-gray-100 flex justify-between items-center">
+                            <span className="text-xs font-semibold text-blue-700 flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" />
+                                AI Suggestions
+                            </span>
+                            <button
+                                onClick={() => setActiveSuggestionField(null)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
+
+                        <div className="p-1 max-h-64 overflow-y-auto">
+                            {isSuggesting ? (
+                                <div className="flex items-center justify-center py-4 text-gray-500 gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="text-xs">Thinking...</span>
+                                </div>
+                            ) : suggestions.length > 0 ? (
+                                <div className="space-y-1">
+                                    {suggestions.map((s, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => applySuggestion(fieldName, s.value)}
+                                            className="w-full text-left p-2 hover:bg-gray-50 rounded-lg group transition-colors"
+                                        >
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="font-medium text-sm text-gray-900">{s.value}</span>
+                                                <span className="text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+                                                    {s.confidence}%
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-gray-500 line-clamp-2 group-hover:text-gray-700">
+                                                {s.reasoning}
+                                            </p>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-3 text-center text-xs text-gray-500">
+                                    No suggestions found.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
         );
     };
 
@@ -546,6 +662,11 @@ export function HazmatForm() {
             {validationResult && (
                 <ValidationResultCard result={validationResult} />
             )}
+
+            <ApiKeyModal
+                isOpen={showApiKeyModal}
+                onClose={() => setShowApiKeyModal(false)}
+            />
         </div>
     );
 }
