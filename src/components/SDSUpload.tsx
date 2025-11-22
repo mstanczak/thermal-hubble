@@ -67,7 +67,7 @@ export function SDSUpload({ onDataParsed, onQuantityCalculated }: SDSUploadProps
 
         try {
             const apiKey = localStorage.getItem('gemini_api_key');
-            const modelId = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
+            const modelId = localStorage.getItem('gemini_model_ocr') || 'gemini-2.5-flash';
 
             if (!apiKey) {
                 throw new Error("API Key is missing. Please configure it in settings.");

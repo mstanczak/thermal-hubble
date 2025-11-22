@@ -6,7 +6,9 @@ export function SettingsPanel() {
     const [apiKey, setApiKey] = useState('');
     const [showKey, setShowKey] = useState(false);
     const [status, setStatus] = useState<'idle' | 'saved' | 'cleared'>('idle');
-    const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
+    const [suggestionModel, setSuggestionModel] = useState('gemini-2.5-flash');
+    const [validationModel, setValidationModel] = useState('gemini-2.5-flash');
+    const [ocrModel, setOcrModel] = useState('gemini-2.5-flash');
     const [signatoryName, setSignatoryName] = useState('');
     const [signatoryTitle, setSignatoryTitle] = useState('');
     const [signatoryPlace, setSignatoryPlace] = useState('');
@@ -26,10 +28,19 @@ export function SettingsPanel() {
         if (storedKey) {
             setApiKey(storedKey);
         }
-        const storedModel = localStorage.getItem('gemini_model');
-        if (storedModel) {
-            setSelectedModel(storedModel);
-        }
+
+        // Load models with fallback to legacy setting or default
+        const legacyModel = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
+
+        const storedSuggestionModel = localStorage.getItem('gemini_model_suggestions');
+        setSuggestionModel(storedSuggestionModel || legacyModel);
+
+        const storedValidationModel = localStorage.getItem('gemini_model_validation');
+        setValidationModel(storedValidationModel || legacyModel);
+
+        const storedOcrModel = localStorage.getItem('gemini_model_ocr');
+        setOcrModel(storedOcrModel || legacyModel);
+
         const storedName = localStorage.getItem('default_signatory_name');
         if (storedName) {
             setSignatoryName(storedName);
@@ -55,7 +66,13 @@ export function SettingsPanel() {
     const handleSave = () => {
         if (apiKey.trim()) {
             localStorage.setItem('gemini_api_key', apiKey.trim());
-            localStorage.setItem('gemini_model', selectedModel);
+            localStorage.setItem('gemini_model_suggestions', suggestionModel);
+            localStorage.setItem('gemini_model_validation', validationModel);
+            localStorage.setItem('gemini_model_ocr', ocrModel);
+
+            // Keep legacy key updated for safety/compatibility during migration
+            localStorage.setItem('gemini_model', suggestionModel);
+
             localStorage.setItem('default_signatory_name', signatoryName.trim());
             localStorage.setItem('default_signatory_title', signatoryTitle.trim());
             localStorage.setItem('default_signatory_place', signatoryPlace.trim());
@@ -69,13 +86,19 @@ export function SettingsPanel() {
     const handleClear = () => {
         localStorage.removeItem('gemini_api_key');
         localStorage.removeItem('gemini_model');
+        localStorage.removeItem('gemini_model_suggestions');
+        localStorage.removeItem('gemini_model_validation');
+        localStorage.removeItem('gemini_model_ocr');
+
         localStorage.removeItem('default_signatory_name');
         localStorage.removeItem('default_signatory_title');
         localStorage.removeItem('default_signatory_place');
         localStorage.removeItem('default_emergency_phone');
         localStorage.removeItem('default_offeror_name');
         setApiKey('');
-        setSelectedModel('gemini-2.5-flash');
+        setSuggestionModel('gemini-2.5-flash');
+        setValidationModel('gemini-2.5-flash');
+        setOcrModel('gemini-2.5-flash');
         setSignatoryName('');
         setSignatoryTitle('');
         setSignatoryPlace('');
@@ -125,19 +148,54 @@ export function SettingsPanel() {
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">AI Model</label>
-                    <select
-                        value={selectedModel}
-                        onChange={(e) => setSelectedModel(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    >
-                        {MODELS.map(model => (
-                            <option key={model.id} value={model.id}>
-                                {model.name} - {model.description}
-                            </option>
-                        ))}
-                    </select>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Suggestions Model</label>
+                        <select
+                            value={suggestionModel}
+                            onChange={(e) => setSuggestionModel(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        >
+                            {MODELS.map(model => (
+                                <option key={model.id} value={model.id}>
+                                    {model.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">For field auto-complete</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Validation Model</label>
+                        <select
+                            value={validationModel}
+                            onChange={(e) => setValidationModel(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        >
+                            {MODELS.map(model => (
+                                <option key={model.id} value={model.id}>
+                                    {model.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">For shipment validation</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">OCR Model</label>
+                        <select
+                            value={ocrModel}
+                            onChange={(e) => setOcrModel(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        >
+                            {MODELS.map(model => (
+                                <option key={model.id} value={model.id}>
+                                    {model.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">For SDS document reading</p>
+                    </div>
                 </div>
 
                 <div className="pt-4 border-t border-gray-200">

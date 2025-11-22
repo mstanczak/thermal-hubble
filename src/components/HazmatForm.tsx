@@ -106,14 +106,6 @@ export function HazmatForm() {
         }
     }, [selectedMode, setValue, watch]);
 
-    // Load default emergency phone on mount
-    useEffect(() => {
-        const defaultPhone = localStorage.getItem('default_emergency_phone');
-        if (defaultPhone && !watch('emergencyPhone')) {
-            setValue('emergencyPhone', defaultPhone);
-        }
-    }, [setValue, watch]);
-
     // Load default offeror name when Ground mode is selected
     useEffect(() => {
         if (selectedMode === 'Ground') {
@@ -124,6 +116,31 @@ export function HazmatForm() {
         }
     }, [selectedMode, setValue, watch]);
 
+    // Load default emergency phone on mount
+    useEffect(() => {
+        const defaultPhone = localStorage.getItem('default_emergency_phone');
+        if (defaultPhone && !watch('emergencyPhone')) {
+            setValue('emergencyPhone', defaultPhone);
+        }
+    }, [setValue, watch]);
+
+    // Reset confidence score when user manually modifies a field
+    useEffect(() => {
+        const subscription = watch((value, { name, type }) => {
+            if (name && type === 'change') {
+                setConfidenceScores(prev => {
+                    if (prev[name] !== undefined) {
+                        const newScores = { ...prev };
+                        delete newScores[name];
+                        return newScores;
+                    }
+                    return prev;
+                });
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [watch]);
+
     const onSubmit = async (data: HazmatFormData) => {
         setApiError(null);
         setValidationResult(null);
@@ -131,7 +148,7 @@ export function HazmatForm() {
 
         try {
             const apiKey = localStorage.getItem('gemini_api_key');
-            const modelId = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
+            const modelId = localStorage.getItem('gemini_model_validation') || 'gemini-2.5-flash';
 
             if (!apiKey) {
                 setShowApiKeyModal(true);
@@ -156,7 +173,7 @@ export function HazmatForm() {
 
         try {
             const apiKey = localStorage.getItem('gemini_api_key');
-            const modelId = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
+            const modelId = localStorage.getItem('gemini_model_suggestions') || 'gemini-2.5-flash';
 
             if (!apiKey) {
                 setShowApiKeyModal(true);
