@@ -1,11 +1,13 @@
 import { Layout } from './components/Layout';
 import { SettingsPanel } from './components/SettingsPanel';
 import { HazmatForm } from './components/HazmatForm';
+import { DGValidator } from './components/DGValidator';
 import { useState, useEffect } from 'react';
-import { Settings, ArrowLeft, AlertTriangle, X } from 'lucide-react';
+import { Settings, ArrowLeft, AlertTriangle, X, Scan } from 'lucide-react';
+import clsx from 'clsx';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'form' | 'settings'>('form');
+  const [currentPage, setCurrentPage] = useState<'form' | 'settings' | 'validator'>('form');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   useEffect(() => {
@@ -23,7 +25,7 @@ function App() {
   return (
     <Layout onSettingsClick={() => setCurrentPage('settings')}>
       <div className="max-w-4xl mx-auto">
-        {currentPage === 'form' ? (
+        {currentPage === 'form' || currentPage === 'validator' ? (
           <>
             <div className="mb-8 flex items-center justify-between">
               <div>
@@ -66,7 +68,33 @@ function App() {
               </button>
             </div>
 
-            <HazmatForm />
+            <div className="flex gap-4 mb-6">
+              <button
+                onClick={() => setCurrentPage('form')}
+                className={clsx(
+                  "flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all text-center",
+                  currentPage === 'form'
+                    ? "border-purple-600 bg-purple-50 text-purple-700"
+                    : "border-gray-200 hover:border-purple-200 text-gray-600"
+                )}
+              >
+                New Shipment Form
+              </button>
+              <button
+                onClick={() => setCurrentPage('validator')}
+                className={clsx(
+                  "flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all text-center flex items-center justify-center gap-2",
+                  currentPage === 'validator'
+                    ? "border-blue-600 bg-blue-50 text-blue-700"
+                    : "border-gray-200 hover:border-blue-200 text-gray-600"
+                )}
+              >
+                <Scan className="w-4 h-4" />
+                DG Validator (OCR)
+              </button>
+            </div>
+
+            {currentPage === 'form' ? <HazmatForm /> : <DGValidator />}
           </>
         ) : (
           <>

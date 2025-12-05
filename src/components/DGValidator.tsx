@@ -1,0 +1,211 @@
+import { useState, useRef } from 'react';
+import { Upload, FileText, AlertCircle, Loader2, Check, AlertTriangle, XCircle } from 'lucide-react';
+import { validateDGScreenShotWithGemini, type ValidationResult } from '../lib/gemini';
+import clsx from 'clsx';
+
+export function DGValidator() {
+    const [isDragging, setIsDragging] = useState(false);
+    const [file, setFile] = useState<File | null>(null);
+    const [status, setStatus] = useState<'idle' | 'analyzing' | 'complete' | 'error'>('idle');
+    const [result, setResult] = useState<ValidationResult | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const droppedFile = e.dataTransfer.files[0];
+        if (droppedFile) processFile(droppedFile);
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) processFile(selectedFile);
+    };
+
+    const processFile = async (file: File) => {
+        if (!file.type.startsWith('image/')) {
+            setError('Please upload an image file (screenshot).');
+            return;
+        }
+
+        setFile(file);
+        setError(null);
+        setStatus('analyzing');
+        setResult(null);
+
+        try {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            const modelId = localStorage.getItem('gemini_model_ocr') || 'gemini-2.5-flash';
+
+            if (!apiKey) {
+                throw new Error("API Key is missing. Please configure it in settings.");
+            }
+
+            const validationResult = await validateDGScreenShotWithGemini(file, apiKey, modelId);
+            setResult(validationResult);
+            setStatus('complete');
+        } catch (err: any) {
+            setError(err.message || "Unknown error occurred");
+            setStatus('error');
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    DG Form Validator
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                    Upload a screenshot of your shipping software's Dangerous Goods tab (e.g., Piyovi, FedEx Ship Manager) to validate compliance.
+                </p>
+
+                <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={clsx(
+                        "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[200px]",
+                        isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-400 hover:bg-gray-50",
+                        file && status === 'complete' ? "bg-green-50 border-green-200" : ""
+                    )}
+                >
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                    />
+
+                    {status === 'analyzing' ? (
+                        <div className="flex flex-col items-center gap-3">
+                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                            <p className="text-sm font-medium text-blue-700">Analyzing Screenshot...</p>
+                            <p className="text-xs text-gray-500">Checking against regulations...</p>
+                        </div>
+                    ) : status === 'complete' && result ? (
+                        <div className="flex flex-col items-center gap-2">
+                            <div className={clsx(
+                                "w-12 h-12 rounded-full flex items-center justify-center mb-2",
+                                result.status === 'Pass' ? "bg-green-100 text-green-600" :
+                                    result.status === 'Fail' ? "bg-red-100 text-red-600" :
+                                        "bg-amber-100 text-amber-600"
+                            )}>
+                                {result.status === 'Pass' ? <Check className="w-6 h-6" /> :
+                                    result.status === 'Fail' ? <XCircle className="w-6 h-6" /> :
+                                        <AlertTriangle className="w-6 h-6" />}
+                            </div>
+                            <p className="text-lg font-bold text-gray-900">Validation {result.status}</p>
+                            <p className="text-sm text-gray-600">{file?.name}</p>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setFile(null); setStatus('idle'); setResult(null); }}
+                                className="text-sm text-blue-600 hover:underline mt-2"
+                            >
+                                Upload Another
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <Upload className="w-10 h-10 text-gray-400 mb-4" />
+                            <p className="text-base font-medium text-gray-700">Drop screenshot here</p>
+                            <p className="text-sm text-gray-500 mt-1">or click to browse</p>
+                        </>
+                    )}
+                </div>
+                {error && <p className="text-red-500 text-sm mt-3 text-center">{error}</p>}
+            </div>
+
+            {/* Results Display */}
+            {result && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className={clsx(
+                        "p-4 border-b",
+                        result.status === 'Pass' ? "bg-green-50 border-green-100" :
+                            result.status === 'Fail' ? "bg-red-50 border-red-100" :
+                                "bg-amber-50 border-amber-100"
+                    )}>
+                        <h4 className={clsx(
+                            "font-semibold flex items-center gap-2",
+                            result.status === 'Pass' ? "text-green-800" :
+                                result.status === 'Fail' ? "text-red-800" :
+                                    "text-amber-800"
+                        )}>
+                            {result.status === 'Pass' ? <Check className="w-5 h-5" /> :
+                                result.status === 'Fail' ? <XCircle className="w-5 h-5" /> :
+                                    <AlertTriangle className="w-5 h-5" />}
+                            Analysis Report
+                        </h4>
+                    </div>
+
+                    <div className="p-6">
+                        {result.issues.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                                <Check className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                                <p className="text-lg font-medium text-gray-900">No Issues Found</p>
+                                <p>The shipment appears to be compliant with regulations.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {result.issues.map((issue, idx) => (
+                                    <div key={idx} className={clsx(
+                                        "p-4 rounded-lg border",
+                                        issue.severity === 'Critical' ? "bg-red-50 border-red-200" :
+                                            issue.severity === 'Warning' ? "bg-amber-50 border-amber-200" :
+                                                "bg-blue-50 border-blue-200"
+                                    )}>
+                                        <div className="flex items-start gap-3">
+                                            {issue.severity === 'Critical' ? <XCircle className="w-5 h-5 text-red-600 mt-0.5" /> :
+                                                issue.severity === 'Warning' ? <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" /> :
+                                                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />}
+
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className={clsx(
+                                                        "text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded",
+                                                        issue.severity === 'Critical' ? "bg-red-200 text-red-800" :
+                                                            issue.severity === 'Warning' ? "bg-amber-200 text-amber-800" :
+                                                                "bg-blue-200 text-blue-800"
+                                                    )}>
+                                                        {issue.severity}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">Confidence: {issue.confidence}%</span>
+                                                </div>
+                                                <p className="font-medium text-gray-900 mb-1">{issue.description}</p>
+                                                <p className="text-sm text-gray-700 mb-2">{issue.explanation}</p>
+
+                                                {issue.recommendation && (
+                                                    <div className="text-sm bg-white bg-opacity-60 p-2 rounded border border-gray-200/50">
+                                                        <span className="font-semibold text-gray-700">Recommendation: </span>
+                                                        {issue.recommendation}
+                                                    </div>
+                                                )}
+
+                                                {issue.regulationReference && (
+                                                    <p className="text-xs text-gray-500 mt-2">Ref: {issue.regulationReference}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

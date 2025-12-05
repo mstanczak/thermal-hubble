@@ -297,3 +297,76 @@ export async function getFieldSuggestions(
     return [];
   }
 }
+
+export async function validateDGScreenShotWithGemini(
+  file: File,
+  apiKey: string,
+  modelId: string = "gemini-1.5-flash"
+): Promise<ValidationResult> {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: modelId });
+
+    // Convert file to base64
+    const base64Data = await fileToGenerativePart(file);
+
+    const prompt = `
+      You are a hazardous materials compliance expert. Analyze this screenshot of a shipping software's Dangerous Goods tab.
+      
+      1. Extract all visible dangerous goods information (UN Number, Proper Shipping Name, Class, Packing Group, Quantity, etc.).
+      2. Validate the extracted information against standard IATA and DOT regulations.
+      3. Check for common errors such as:
+         - Mismatched UN Number and Proper Shipping Name.
+         - Incorrect Packing Group for the UN Number.
+         - Quantity exceeding limits for the likely mode of transport (assume Ground if not specified, or infer from context like "FedEx Ground").
+         - Missing required fields.
+      
+      Return a JSON object with the following structure:
+      {
+        "status": "Pass" | "Fail" | "Warnings",
+        "issues": [
+          {
+            "description": "Description of the issue",
+            "confidence": number (0-100),
+            "regulationReference": "e.g., IATA 4.2",
+            "recommendation": "How to fix it",
+            "severity": "Critical" | "Warning" | "Info",
+            "explanation": "Why this is an issue"
+          }
+        ]
+      }
+      
+      If everything looks correct, return "status": "Pass" and an empty "issues" array.
+      IMPORTANT: Return ONLY the raw JSON object.
+    `;
+
+    const result = await model.generateContent([prompt, base64Data]);
+    const response = await result.response;
+    const text = response.text();
+
+    const jsonString = text.replace(/```json\n|\n```/g, "").trim();
+    return JSON.parse(jsonString) as ValidationResult;
+  } catch (error: any) {
+    console.error("DG Screenshot Validation Error:", error);
+    throw new Error(`Validation failed: ${error.message}`);
+  }
+}
+
+async function fileToGenerativePart(file: File): Promise<{ inlineData: { data: string; mimeType: string } }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+      const base64Data = base64String.split(',')[1];
+      resolve({
+        inlineData: {
+          data: base64Data,
+          mimeType: file.type
+        }
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
