@@ -110,7 +110,7 @@ export async function parseSDSWithGemini(
 
     // Stage 2: Data Extraction with selected model
     if (onProgress) onProgress("Extracting Shipping Data...");
-    const data = await extractDataFromText(ocrText, apiKey);
+    const data = await extractDataFromText(ocrText, apiKey, _modelId);
 
     return data;
   } catch (error: any) {
@@ -184,10 +184,10 @@ async function convertPdfToImages(file: File): Promise<string[]> {
   return images;
 }
 
-async function extractDataFromText(text: string, apiKey: string): Promise<Partial<HazmatFormData> & { confidence?: Record<string, number> }> {
+async function extractDataFromText(text: string, apiKey: string, modelId: string = 'gemini-2.5-flash'): Promise<Partial<HazmatFormData> & { confidence?: Record<string, number> }> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Always use flash-lite for fast extraction, regardless of user's model selection
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+  // Use user selected model
+  const model = genAI.getGenerativeModel({ model: modelId });
 
   const prompt = `
       Analyze the following text extracted from a Safety Data Sheet (SDS) or shipping document.

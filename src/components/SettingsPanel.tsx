@@ -6,9 +6,9 @@ export function SettingsPanel() {
     const [apiKey, setApiKey] = useState('');
     const [showKey, setShowKey] = useState(false);
     const [status, setStatus] = useState<'idle' | 'saved' | 'cleared'>('idle');
-    const [suggestionModel, setSuggestionModel] = useState('gemini-2.5-flash');
+    const [suggestionModel, setSuggestionModel] = useState('gemini-3-flash-preview');
     const [validationModel, setValidationModel] = useState('gemini-2.5-flash');
-    const [ocrModel, setOcrModel] = useState('gemini-2.5-flash');
+    const [ocrModel, setOcrModel] = useState('gemini-3-flash-preview');
     const [signatoryName, setSignatoryName] = useState('');
     const [signatoryTitle, setSignatoryTitle] = useState('');
     const [signatoryPlace, setSignatoryPlace] = useState('');
@@ -16,6 +16,7 @@ export function SettingsPanel() {
     const [offerorName, setOfferorName] = useState('');
 
     const MODELS = [
+        { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', description: 'Fastest reasoning. Best for speed.' },
         { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Newest fast model. Best for suggestions.' },
         { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and cost-effective. Good for general tasks.' },
         { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'High performance. Best for complex reasoning.' },
@@ -33,13 +34,13 @@ export function SettingsPanel() {
         const legacyModel = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
 
         const storedSuggestionModel = localStorage.getItem('gemini_model_suggestions');
-        setSuggestionModel(storedSuggestionModel || legacyModel);
+        setSuggestionModel(storedSuggestionModel || 'gemini-3-flash-preview');
 
         const storedValidationModel = localStorage.getItem('gemini_model_validation');
         setValidationModel(storedValidationModel || legacyModel);
 
         const storedOcrModel = localStorage.getItem('gemini_model_ocr');
-        setOcrModel(storedOcrModel || legacyModel);
+        setOcrModel(storedOcrModel || 'gemini-3-flash-preview');
 
         const storedName = localStorage.getItem('default_signatory_name');
         if (storedName) {
