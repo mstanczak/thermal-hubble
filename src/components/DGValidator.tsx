@@ -9,6 +9,7 @@ export function DGValidator() {
     const [status, setStatus] = useState<'idle' | 'analyzing' | 'complete' | 'error'>('idle');
     const [result, setResult] = useState<ValidationResult | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isFocused, setIsFocused] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -89,10 +90,14 @@ export function DGValidator() {
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                     onPaste={handlePaste}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
                     tabIndex={0}
                     className={clsx(
                         "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[200px] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-                        isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-400 hover:bg-gray-50",
+                        isDragging ? "border-blue-500 bg-blue-50" :
+                            isFocused && !file ? "border-green-400 bg-green-50" :
+                                "border-gray-300 hover:border-blue-400 hover:bg-gray-50",
                         file && status === 'complete' ? "bg-green-50 border-green-200" : ""
                     )}
                 >
@@ -133,11 +138,17 @@ export function DGValidator() {
                                 Upload Another
                             </button>
                         </div>
+                    ) : isFocused ? (
+                        <div className="animate-in fade-in zoom-in-95 duration-200">
+                            <Check className="w-12 h-12 text-green-500 mb-4 mx-auto" />
+                            <p className="text-lg font-bold text-green-700">Ready to Paste!</p>
+                            <p className="text-sm text-green-600 mt-1">Press Ctrl+V to validate</p>
+                        </div>
                     ) : (
                         <>
                             <Upload className="w-10 h-10 text-gray-400 mb-4" />
-                            <p className="text-base font-medium text-gray-700">Drop screenshot here, paste from clipboard</p>
-                            <p className="text-sm text-gray-500 mt-1">or click to browse</p>
+                            <p className="text-base font-medium text-gray-700">Click here to enable pasting</p>
+                            <p className="text-sm text-gray-500 mt-1">or drag & drop screenshot</p>
                         </>
                     )}
                 </div>
