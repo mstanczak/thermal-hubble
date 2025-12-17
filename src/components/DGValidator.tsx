@@ -33,6 +33,17 @@ export function DGValidator() {
         if (selectedFile) processFile(selectedFile);
     };
 
+    const handlePaste = (e: React.ClipboardEvent) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const blob = items[i].getAsFile();
+                if (blob) processFile(blob);
+                break;
+            }
+        }
+    };
+
     const processFile = async (file: File) => {
         if (!file.type.startsWith('image/')) {
             setError('Please upload an image file (screenshot).');
@@ -77,8 +88,10 @@ export function DGValidator() {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
+                    onPaste={handlePaste}
+                    tabIndex={0}
                     className={clsx(
-                        "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[200px]",
+                        "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[200px] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
                         isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-400 hover:bg-gray-50",
                         file && status === 'complete' ? "bg-green-50 border-green-200" : ""
                     )}
@@ -121,7 +134,7 @@ export function DGValidator() {
                     ) : (
                         <>
                             <Upload className="w-10 h-10 text-gray-400 mb-4" />
-                            <p className="text-base font-medium text-gray-700">Drop screenshot here</p>
+                            <p className="text-base font-medium text-gray-700">Drop screenshot here, paste from clipboard</p>
                             <p className="text-sm text-gray-500 mt-1">or click to browse</p>
                         </>
                     )}
