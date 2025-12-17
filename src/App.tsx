@@ -2,12 +2,14 @@ import { Layout } from './components/Layout';
 import { SettingsPanel } from './components/SettingsPanel';
 import { HazmatForm } from './components/HazmatForm';
 import { DGValidator } from './components/DGValidator';
+import { Documentation } from './components/Documentation';
+import { Support } from './components/Support';
 import { useState, useEffect } from 'react';
 import { Settings, ArrowLeft, AlertTriangle, X, Scan } from 'lucide-react';
 import clsx from 'clsx';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'form' | 'settings' | 'validator'>('form');
+  const [currentPage, setCurrentPage] = useState<'form' | 'settings' | 'validator' | 'documentation' | 'support'>('form');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   useEffect(() => {
@@ -22,10 +24,37 @@ function App() {
     setShowDisclaimer(false);
   };
 
-  return (
-    <Layout onSettingsClick={() => setCurrentPage('settings')}>
-      <div className="max-w-4xl mx-auto">
-        {currentPage === 'form' || currentPage === 'validator' ? (
+  const renderContent = () => {
+    switch (currentPage) {
+      case 'settings':
+        return (
+          <>
+            <div className="mb-8 flex items-center gap-4">
+              <button
+                onClick={() => setCurrentPage('form')}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Form
+              </button>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Settings</h2>
+                <p className="text-gray-600">
+                  Configure AI settings and default values for your shipments.
+                </p>
+              </div>
+            </div>
+            <SettingsPanel />
+          </>
+        );
+      case 'documentation':
+        return <Documentation />;
+      case 'support':
+        return <Support />;
+      case 'validator':
+      case 'form':
+      default:
+        return (
           <>
             <div className="mb-8 flex items-center justify-between">
               <div>
@@ -96,27 +125,19 @@ function App() {
 
             {currentPage === 'form' ? <HazmatForm /> : <DGValidator />}
           </>
-        ) : (
-          <>
-            <div className="mb-8 flex items-center gap-4">
-              <button
-                onClick={() => setCurrentPage('form')}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Form
-              </button>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Settings</h2>
-                <p className="text-gray-600">
-                  Configure AI settings and default values for your shipments.
-                </p>
-              </div>
-            </div>
+        );
+    }
+  };
 
-            <SettingsPanel />
-          </>
-        )}
+  return (
+    <Layout
+      onSettingsClick={() => setCurrentPage('settings')}
+      onDocumentationClick={() => setCurrentPage('documentation')}
+      onSupportClick={() => setCurrentPage('support')}
+      onLogoClick={() => setCurrentPage('form')}
+    >
+      <div className="max-w-4xl mx-auto">
+        {renderContent()}
       </div>
     </Layout>
   );
