@@ -122,7 +122,9 @@ export function DGValidator() {
                                     result.status === 'Fail' ? <XCircle className="w-6 h-6" /> :
                                         <AlertTriangle className="w-6 h-6" />}
                             </div>
-                            <p className="text-lg font-bold text-gray-900">Validation {result.status}</p>
+                            <p className="text-lg font-bold text-gray-900">
+                                {result.status === 'Warnings' ? 'Passed with Warnings' : `Validation ${result.status}`}
+                            </p>
                             <p className="text-sm text-gray-600">{file?.name}</p>
                             <button
                                 onClick={(e) => { e.stopPropagation(); setFile(null); setStatus('idle'); setResult(null); }}

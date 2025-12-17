@@ -90,7 +90,9 @@ export function ValidationResultCard({ result }: ValidationResultProps) {
             <div className={clsx("p-6 rounded-xl border flex items-center gap-4", statusColor)}>
                 {statusIcon}
                 <div>
-                    <h3 className="text-xl font-bold">Validation Status: {result.status}</h3>
+                    <h3 className="text-xl font-bold">
+                        {result.status === 'Warnings' ? 'Passed Checks (with warnings)' : `Validation Status: ${result.status}`}
+                    </h3>
                     <p className="text-sm opacity-90">
                         {result.issues.length} issue(s) found during analysis.
                     </p>
