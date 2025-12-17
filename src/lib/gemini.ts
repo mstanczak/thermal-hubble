@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { HazmatFormData } from "./validation";
+import { StorageManager } from "./storage";
 import { REGULATION_RULES } from "../data/regulations";
 import { createWorker } from 'tesseract.js';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -20,6 +21,8 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
+import { MCPClientManager } from "./mcp";
+
 export async function validateShipmentWithGemini(
   data: HazmatFormData,
   apiKey: string,
@@ -29,8 +32,33 @@ export async function validateShipmentWithGemini(
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: modelId });
 
+    // Fetch external context from MCP servers
+    const mcpManager = MCPClientManager.getInstance();
+    const mcpContext = await mcpManager.fetchContextFromServers(); // Note: MCP fetching needs update to return objects with weights, or we parse the string. 
+    // For now, let's assume mcpContext is a string, but ideally we'd want structured data.
+    // However, given the current mcp.ts implementation returns a string, we might need to refactor mcp.ts OR just append local docs.
+
+    // Actually, let's fetch local docs and append them with their weights.
+    const localDocs = await StorageManager.getAllDocuments();
+    let externalContext = mcpContext; // Start with MCP context (legacy/string based)
+
+    if (localDocs.length > 0) {
+      externalContext += "\n\n--- LOCAL DOCUMENTS (Weighted Context) ---\n";
+      // Sort by weight desc
+      localDocs.sort((a, b) => b.weight - a.weight);
+
+      for (const doc of localDocs) {
+        externalContext += `\n[SOURCE: ${doc.name} (Weight: ${doc.weight}%)]\n${doc.content}\n`;
+      }
+    }
+
     const prompt = `
       You are a hazmat shipping compliance expert. Analyze this dangerous goods shipment for compliance with [IATA/DOT 49 CFR] regulations and [FedEx/UPS] carrier-specific requirements.
+
+      Use the following external context if relevant. Pay close attention to sources with higher weights (e.g., 90-100%).
+      ${externalContext}
+
+
 
       Shipment Details:
       - Carrier: ${data.carrier}
@@ -156,6 +184,34 @@ async function performOCR(file: File, onProgress?: (status: string) => void): Pr
   return text;
 }
 
+export async function extractTextFromPdf(file: File): Promise<string> {
+  // First try to extract text directly from the PDF (vector text)
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map((item: any) => item.str).join(' ');
+      if (pageText.trim().length > 0) {
+        fullText += pageText + '\n\n';
+      }
+    }
+
+    // If we extracted meaningful text, return it
+    if (fullText.trim().length > 50) { // Arbitrary threshold to detect if it's not just a scanned container
+      return fullText;
+    }
+  } catch (e) {
+    console.warn("PDF Text extraction failed, falling back to OCR", e);
+  }
+
+  // Fallback to OCR if text extraction yield little/no results
+  return await performOCR(file);
+}
+
 async function convertPdfToImages(file: File): Promise<string[]> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -261,8 +317,27 @@ export async function getFieldSuggestions(
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: modelId });
 
+    // Fetch external context from MCP servers
+    const mcpManager = MCPClientManager.getInstance();
+    const mcpContext = await mcpManager.fetchContextFromServers();
+
+    const localDocs = await StorageManager.getAllDocuments();
+    let externalContext = mcpContext;
+
+    if (localDocs.length > 0) {
+      externalContext += "\n\n--- LOCAL DOCUMENTS (Weighted Context) ---\n";
+      localDocs.sort((a, b) => b.weight - a.weight);
+      for (const doc of localDocs) {
+        externalContext += `\n[SOURCE: ${doc.name} (Weight: ${doc.weight}%)]\n${doc.content}\n`;
+      }
+    }
+
     const prompt = `
       You are a hazmat shipping expert. Based on the current shipment details, suggest the most likely values for the "${fieldName}" field.
+      
+      Use the following external context if relevant (prioritize high-weight sources):
+      ${externalContext}
+
       
       Current Form Data:
       - Carrier: ${data.carrier}

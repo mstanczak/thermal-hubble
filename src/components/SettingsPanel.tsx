@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Key, Eye, EyeOff, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { StorageManager, type LocalDocument } from '../lib/storage';
+import { extractTextFromPdf } from '../lib/gemini';
+import { Key, Eye, EyeOff, Trash2, CheckCircle, AlertCircle, Server, Plus, ChevronDown, ChevronUp, RefreshCw, Info, FileText, Upload } from 'lucide-react';
+import type { MCPServerConfig } from '../lib/mcp';
+import { MCPClientManager } from '../lib/mcp';
 import clsx from 'clsx';
 
 export function SettingsPanel() {
@@ -24,6 +28,17 @@ export function SettingsPanel() {
         { id: 'models/gemini-3-pro-preview', name: 'Gemini 3 Pro Preview', description: 'Latest experimental model.' },
     ];
 
+    const [mcpServers, setMcpServers] = useState<MCPServerConfig[]>([]);
+    const [newMcpUrl, setNewMcpUrl] = useState('');
+    const [newMcpName, setNewMcpName] = useState('');
+    const [isTestingMcp, setIsTestingMcp] = useState(false);
+    const [mcpTestResult, setMcpTestResult] = useState<{ success: boolean; msg: string } | null>(null);
+    const [showMcpHelp, setShowMcpHelp] = useState(false);
+
+    // Document State
+    const [documents, setDocuments] = useState<LocalDocument[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
+
     useEffect(() => {
         const storedKey = localStorage.getItem('gemini_api_key');
         if (storedKey) {
@@ -41,6 +56,15 @@ export function SettingsPanel() {
 
         const storedOcrModel = localStorage.getItem('gemini_model_ocr');
         setOcrModel(storedOcrModel || 'gemini-3-flash-preview');
+
+        // Load MCP servers
+        const storedMcpServers = localStorage.getItem('mcp_servers');
+        if (storedMcpServers) {
+            setMcpServers(JSON.parse(storedMcpServers));
+        }
+
+        // Load Documents
+        StorageManager.getAllDocuments().then(setDocuments);
 
         const storedName = localStorage.getItem('default_signatory_name');
         if (storedName) {
@@ -64,12 +88,87 @@ export function SettingsPanel() {
         }
     }, []);
 
+    const addMcpServer = () => {
+        if (!newMcpName || !newMcpUrl) return;
+        const newServer: MCPServerConfig = { name: newMcpName, url: newMcpUrl, enabled: true, weight: 100 };
+        const updated = [...mcpServers, newServer];
+        setMcpServers(updated);
+        setNewMcpName('');
+        setNewMcpUrl('');
+    };
+
+    const removeMcpServer = (index: number) => {
+        const updated = mcpServers.filter((_, i) => i !== index);
+        setMcpServers(updated);
+    };
+
+    const toggleMcpServer = (index: number) => {
+        const updated = [...mcpServers];
+        updated[index].enabled = !updated[index].enabled;
+        setMcpServers(updated);
+    };
+
+    const testMcpConnection = async (url: string) => {
+        setIsTestingMcp(true);
+        setMcpTestResult(null);
+        try {
+            const manager = MCPClientManager.getInstance();
+            await manager.connectToServer(url);
+            setMcpTestResult({ success: true, msg: "Connected successfully!" });
+        } catch (err) {
+            setMcpTestResult({ success: false, msg: "Connection failed. Ensure server supports SSE." });
+        } finally {
+            setIsTestingMcp(false);
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const text = await extractTextFromPdf(file);
+            const newDoc: LocalDocument = {
+                id: crypto.randomUUID(),
+                name: file.name,
+                content: text,
+                weight: 100,
+                type: 'pdf',
+                timestamp: Date.now()
+            };
+            await StorageManager.saveDocument(newDoc);
+            setDocuments(await StorageManager.getAllDocuments());
+        } catch (err) {
+            console.error("Upload failed", err);
+            alert("Failed to process document.");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleDeleteDocument = async (id: string) => {
+        await StorageManager.deleteDocument(id);
+        setDocuments(await StorageManager.getAllDocuments());
+    };
+
+    const handleDocumentWeightChange = async (id: string, weight: number) => {
+        const doc = documents.find(d => d.id === id);
+        if (doc) {
+            const updated = { ...doc, weight };
+            await StorageManager.saveDocument(updated);
+            setDocuments(await StorageManager.getAllDocuments());
+        }
+    };
+
     const handleSave = () => {
         if (apiKey.trim()) {
             localStorage.setItem('gemini_api_key', apiKey.trim());
             localStorage.setItem('gemini_model_suggestions', suggestionModel);
             localStorage.setItem('gemini_model_validation', validationModel);
             localStorage.setItem('gemini_model_ocr', ocrModel);
+
+            localStorage.setItem('mcp_servers', JSON.stringify(mcpServers));
 
             // Keep legacy key updated for safety/compatibility during migration
             localStorage.setItem('gemini_model', suggestionModel);
@@ -196,6 +295,181 @@ export function SettingsPanel() {
                             ))}
                         </select>
                         <p className="text-xs text-gray-500 mt-1">For SDS document reading</p>
+                    </div>
+                </div>
+
+                {/* MCP Settings */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Server className="w-5 h-5 text-purple-600" />
+                        External Resources (MCP)
+                    </h3>
+
+                    <div className="mb-6">
+                        <button
+                            type="button"
+                            onClick={() => setShowMcpHelp(!showMcpHelp)}
+                            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium mb-3"
+                        >
+                            {showMcpHelp ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            How & Why use MCP?
+                        </button>
+
+                        {showMcpHelp && (
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-900 mb-4 animate-in slide-in-from-top-2">
+                                <p className="mb-2 font-semibold">Connect your internal knowledge base to the AI.</p>
+                                <p className="mb-3">The Model Context Protocol (MCP) allows this app to securely access external data sources via SSE (Server-Sent Events) to improve validation accuracy.</p>
+
+                                <h4 className="font-bold mb-1 mt-3">Examples:</h4>
+                                <ul className="list-disc list-inside space-y-1 ml-1">
+                                    <li><strong>FedEx Variations:</strong> Connect a server that scrapes real-time FX-08 operator variations so the AI knows the latest rules.</li>
+                                    <li><strong>Internal Database:</strong> Connect to your company's product database to validate part numbers against internal specs.</li>
+                                    <li><strong>Private Docs:</strong> Provide access to proprietary SOPs that the public AI model doesn't know about.</li>
+                                </ul>
+                            </div>
+                        )}
+
+                        <div className="flex gap-2 mb-4">
+                            <input
+                                placeholder="Server Name (e.g. Internal DB)"
+                                value={newMcpName}
+                                onChange={(e) => setNewMcpName(e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            />
+                            <input
+                                placeholder="SSE URL (e.g. http://localhost:3000/sse)"
+                                value={newMcpUrl}
+                                onChange={(e) => setNewMcpUrl(e.target.value)}
+                                className="flex-[2] px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            />
+                            <button
+                                onClick={addMcpServer}
+                                disabled={!newMcpName || !newMcpUrl}
+                                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                <Plus className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {mcpServers.map((server, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <input
+                                        type="checkbox"
+                                        checked={server.enabled}
+                                        onChange={() => toggleMcpServer(idx)}
+                                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                    />
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-sm text-gray-900 truncate">{server.name}</p>
+                                        <p className="text-xs text-gray-500 truncate">{server.url}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => testMcpConnection(server.url)}
+                                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                        title="Test Connection"
+                                    >
+                                        <RefreshCw className={clsx("w-4 h-4", isTestingMcp && "animate-spin")} />
+                                    </button>
+                                    <button
+                                        onClick={() => removeMcpServer(idx)}
+                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                        title="Remove Server"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                        {mcpServers.length === 0 && (
+                            <div className="text-center py-6 text-gray-400 text-sm italic border-2 border-dashed border-gray-100 rounded-lg">
+                                No external resources configured.
+                            </div>
+                        )}
+                    </div>
+
+                    {mcpTestResult && (
+                        <div className={clsx("mt-4 text-sm p-3 rounded-lg flex items-center gap-2", mcpTestResult.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>
+                            {mcpTestResult.success ? <CheckCircle className="w-4 h-4" /> : <Info className="w-4 h-4" />}
+                            {mcpTestResult.msg}
+                        </div>
+                    )}
+                </div>
+
+                {/* Local Documents */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-600" />
+                        Local Documents (Context)
+                    </h3>
+
+                    <div className="mb-6">
+                        <p className="text-sm text-gray-600 mb-3">Upload PDF guides (e.g., FedEx FX-18, IATA extracts) to be used as context during validation.</p>
+
+                        <div className="flex items-center gap-4">
+                            <label className={clsx(
+                                "flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors border border-indigo-200",
+                                isUploading && "opacity-50 cursor-not-allowed"
+                            )}>
+                                <Upload className="w-4 h-4" />
+                                {isUploading ? 'Processing...' : 'Upload PDF'}
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="application/pdf"
+                                    onChange={handleFileUpload}
+                                    disabled={isUploading}
+                                />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {documents.map((doc) => (
+                            <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex items-center gap-3 overflow-hidden flex-1">
+                                    <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-sm text-gray-900 truncate" title={doc.name}>{doc.name}</p>
+                                        <p className="text-xs text-gray-500 truncate">{(doc.content.length / 1024).toFixed(1)} KB extracted</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-xs font-medium text-gray-500">Weight:</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={doc.weight}
+                                                onChange={(e) => handleDocumentWeightChange(doc.id, parseInt(e.target.value) || 0)}
+                                                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded text-right pr-6"
+                                            />
+                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleDeleteDocument(doc.id)}
+                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                        title="Remove Document"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                        {documents.length === 0 && (
+                            <div className="text-center py-6 text-gray-400 text-sm italic border-2 border-dashed border-gray-100 rounded-lg">
+                                No documents uploaded.
+                            </div>
+                        )}
                     </div>
                 </div>
 

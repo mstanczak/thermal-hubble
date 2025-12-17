@@ -1,0 +1,103 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+
+// Type definition for a configured MCP server
+export interface MCPServerConfig {
+    name: string;
+    url: string;
+    enabled: boolean;
+    weight: number; // 0-100
+}
+
+export class MCPClientManager {
+    private static instance: MCPClientManager;
+    private clients: Map<string, Client> = new Map();
+
+    private constructor() { }
+
+    public static getInstance(): MCPClientManager {
+        if (!MCPClientManager.instance) {
+            MCPClientManager.instance = new MCPClientManager();
+        }
+        return MCPClientManager.instance;
+    }
+
+    /**
+     * Connects to a specific SSE MCP Server.
+     * Note: Browser-based connections require the server to support SSE.
+     */
+    public async connectToServer(url: string): Promise<Client> {
+        if (this.clients.has(url)) {
+            return this.clients.get(url)!;
+        }
+
+        // In a real browser implementation, you'd handle potentially multiple transports.
+        // Here we strictly use SSEClientTransport which relies on browser EventSource.
+        const transport = new SSEClientTransport(new URL(url));
+        const client = new Client(
+            {
+                name: "thermal-hubble-client",
+                version: "1.0.0",
+            },
+            {
+                capabilities: {},
+            }
+        );
+
+        try {
+            await client.connect(transport);
+            this.clients.set(url, client);
+            console.log(`[MCP] Connected to ${url}`);
+            return client;
+        } catch (err) {
+            console.error(`[MCP] Failed to connect to ${url}`, err);
+            throw err;
+        }
+    }
+
+    /**
+     * Fetches context from all enabled MCP servers stored in localStorage.
+     * It lists resources and then reads the content of each resource.
+     */
+    public async fetchContextFromServers(): Promise<string> {
+        const configsStr = localStorage.getItem('mcp_servers');
+        if (!configsStr) return "";
+
+        const configs: MCPServerConfig[] = JSON.parse(configsStr);
+        const enabledServers = configs.filter(c => c.enabled);
+
+        if (enabledServers.length === 0) return "";
+
+        let aggregatedContext = "";
+
+        await Promise.all(enabledServers.map(async (server) => {
+            try {
+                console.log(`[MCP] Fetching context from ${server.name}...`);
+                const client = await this.connectToServer(server.url);
+
+                // list resources
+                const { resources } = await client.listResources();
+
+                for (const resource of resources) {
+                    // read each resource content
+                    const contentResult = await client.readResource({ uri: resource.uri });
+
+                    for (const content of contentResult.contents) {
+                        aggregatedContext += `\n--- SOURCE: ${server.name} (${resource.name}) ---\n`;
+                        if ('text' in content) {
+                            aggregatedContext += content.text + "\n";
+                        } else {
+                            aggregatedContext += `[Binary data: ${content.mimeType}]\n`;
+                        }
+                    }
+                }
+
+            } catch (err) {
+                console.warn(`[MCP] Could not fetch from ${server.name}:`, err);
+                aggregatedContext += `\n[MCP Error] Failed to fetch data from ${server.name}\n`;
+            }
+        }));
+
+        return aggregatedContext;
+    }
+}
