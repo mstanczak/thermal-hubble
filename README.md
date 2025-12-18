@@ -36,6 +36,7 @@ Shipping Dangerous Goods (DG) is high-stakes. A single error can lead to:
 - **AI Core:** Google Gemini 3.0 (Preview), 2.5 Flash, 2.0 Flash Thinking, 1.5 Flash
 - **Integrations:** Model Context Protocol (MCP) via SSE
 - **Storage:** IndexedDB (`idb-keyval`)
+- **OCR:** Tesseract.js (Client-side fallback for scanned PDFs)
 
 ## 🗺️ Roadmap
 
