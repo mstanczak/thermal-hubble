@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# Thermal Hubble - AI-Powered Hazmat Compliance Validator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Thermal Hubble** is an advanced Hazardous Materials (DG) shipping compliance tool designed for warehouse shippers. It leverages **Google Gemini's Multimodal AI** to validate dangerous goods shipments against strict regulations (IATA, DOT 49 CFR) and carrier-specific rules (FedEx, UPS).
 
-Currently, two official plugins are available:
+## 🚀 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 1. 🔍 AI-Powered Compliance Validation
+- **Screenshot Analysis (DG Validator):** Drag & drop screenshots from shipping software (like Piyovi or FedEx Ship Manager). The AI visually scans the image to detect errors, missing fields, or mismatched UN numbers/Packing Groups.
+- **Form Validation:** Real-time data entry validation for Hazmat forms.
+- **Intelligent Suggestions:** Auto-completes complex fields (Proper Shipping Names, Packing Instructions) based on the UN number and mode of transport.
 
-## React Compiler
+### 2. 🧠 Weighted Context Engine
+- **Local "Knowledge Base":** Upload your own PDF guides, SOPs, or text-based rules directly to the browser (processed via **Gemini OCR** for maximum accuracy).
+- **External Context (MCP):** Connect to **Model Context Protocol (MCP)** servers to fetch real-time regulatory updates or external database records.
+- **Influence Control:** Assign "Weights" (0-100%) to different sources. Tell the AI to trust your "Strict SOP" (100%) over a "General Guideline" (50%).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 3. ⚡ Optimized for Warehouse Velocity
+- **Paste Support:** "Just paste" functionality (Ctrl+V) for rapid screenshot validation.
+- **Offline-First:** Heavy documents are stored locally in **IndexedDB** for instant access without re-uploading.
+- **Privacy Focused:** User data and API keys stay in user's LocalStorage; documents stay in their browser.
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Frontend:** React 19, Vite, TypeScript
+- **Styling:** Tailwind CSS 4.0, Framer Motion
+- **AI Core:** Google Gemini 2.0 Flash / 1.5 Flash (via Google Generative AI SDK)
+- **Integrations:** Model Context Protocol (MCP) via SSE (Server-Sent Events)
+- **Storage:** IndexedDB (`idb-keyval`) for large vector/text context
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📦 Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/mstanczak/thermal-hubble.git
+    cd thermal-hubble
+    ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+3.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+4.  **Configure API Keys:**
+    - Open the **Settings Panel** (gear icon).
+    - Enter your **Google Gemini API Key**.
+    - Configure your validation models and upload any custom rulebooks.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🚢 Deployment
+
+This project is configured for **Cloudflare Pages**.
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+
+---
+
+*Verified for compliance with IATA DGR and DOT 49 CFR regulations.*
