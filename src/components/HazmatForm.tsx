@@ -126,7 +126,7 @@ export function HazmatForm() {
 
     // Reset confidence score when user manually modifies a field
     useEffect(() => {
-        const subscription = watch((value, { name, type }) => {
+        const subscription = watch((_value, { name, type }) => {
             if (name && type === 'change') {
                 setConfidenceScores(prev => {
                     if (prev[name] !== undefined) {
