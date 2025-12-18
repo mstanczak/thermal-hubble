@@ -45,6 +45,9 @@ export function Layout({ children, onSettingsClick, onDocumentationClick, onSupp
             <footer className="bg-white border-t border-gray-200 mt-auto">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-gray-500">
                     &copy; {new Date().getFullYear()} Hazmat Validator. Not affiliated with FedEx or UPS.
+                    <p className="mt-2 text-xs text-gray-400">
+                        Disclaimer: This tool is for informational purposes only. AI-generated suggestions are experimental and should not be used as the sole basis for hazardous materials compliance. The developer and AI providers disclaim all liability for any damages resulting from the use of this software. Always verify with the latest 49 CFR or IATA DGR manuals.
+                    </p>
                 </div>
             </footer>
         </div>
