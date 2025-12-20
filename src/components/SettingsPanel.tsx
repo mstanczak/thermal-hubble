@@ -19,6 +19,10 @@ export function SettingsPanel() {
     const [emergencyPhone, setEmergencyPhone] = useState('');
     const [offerorName, setOfferorName] = useState('');
 
+    // Validation Rules State
+    const [ruleEmergencyContact, setRuleEmergencyContact] = useState(true);
+    const [rulePhysicalLabels, setRulePhysicalLabels] = useState(true);
+
     const MODELS = [
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', description: 'Fastest reasoning. Best for speed.' },
         { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Newest fast model. Best for suggestions.' },
@@ -85,6 +89,17 @@ export function SettingsPanel() {
         const storedOfferor = localStorage.getItem('default_offeror_name');
         if (storedOfferor) {
             setOfferorName(storedOfferor);
+        }
+
+        // Load Validation Rules
+        const storedRuleEmergency = localStorage.getItem('rule_emergency_contact');
+        if (storedRuleEmergency !== null) {
+            setRuleEmergencyContact(storedRuleEmergency === 'true');
+        }
+
+        const storedRuleLabels = localStorage.getItem('rule_physical_labels');
+        if (storedRuleLabels !== null) {
+            setRulePhysicalLabels(storedRuleLabels === 'true');
         }
     }, []);
 
@@ -178,6 +193,11 @@ export function SettingsPanel() {
             localStorage.setItem('default_signatory_place', signatoryPlace.trim());
             localStorage.setItem('default_emergency_phone', emergencyPhone.trim());
             localStorage.setItem('default_offeror_name', offerorName.trim());
+
+            // Save Validation Rules
+            localStorage.setItem('rule_emergency_contact', String(ruleEmergencyContact));
+            localStorage.setItem('rule_physical_labels', String(rulePhysicalLabels));
+
             setStatus('saved');
             setTimeout(() => setStatus('idle'), 2000);
         }
@@ -195,6 +215,8 @@ export function SettingsPanel() {
         localStorage.removeItem('default_signatory_place');
         localStorage.removeItem('default_emergency_phone');
         localStorage.removeItem('default_offeror_name');
+        localStorage.removeItem('rule_emergency_contact');
+        localStorage.removeItem('rule_physical_labels');
         setApiKey('');
         setSuggestionModel('gemini-2.5-flash');
         setValidationModel('gemini-2.5-flash');
@@ -204,6 +226,8 @@ export function SettingsPanel() {
         setSignatoryPlace('');
         setEmergencyPhone('');
         setOfferorName('');
+        setRuleEmergencyContact(true);
+        setRulePhysicalLabels(true);
         setStatus('cleared');
         setTimeout(() => setStatus('idle'), 2000);
     };
@@ -298,7 +322,52 @@ export function SettingsPanel() {
                     </div>
                 </div>
 
-                {/* MCP Settings */}
+
+
+                {/* Default Validation Rules */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-emerald-600" />
+                        Default Validation Checks
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        Enable or disable specific checks that the AI should perform on every shipment.
+                    </p>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div>
+                                <p className="font-medium text-gray-900">Require 24-Hour Emergency Response Number</p>
+                                <p className="text-xs text-gray-500">Ensure a valid emergency contact number is present on the document.</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={ruleEmergencyContact}
+                                    onChange={(e) => setRuleEmergencyContact(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div>
+                                <p className="font-medium text-gray-900">Check for Physical Labels</p>
+                                <p className="text-xs text-gray-500">Verify presence of Orientation Arrows, Cargo Aircraft Only, and Hazard Class diamonds (if image context allows).</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={rulePhysicalLabels}
+                                    onChange={(e) => setRulePhysicalLabels(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <Server className="w-5 h-5 text-purple-600" />
@@ -563,12 +632,14 @@ export function SettingsPanel() {
                 </div>
             </div>
 
-            {!apiKey && (
-                <div className="mt-3 flex items-center gap-2 text-amber-600 text-sm bg-amber-50 p-2 rounded-md border border-amber-100">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>API Key is required for AI validation features.</span>
-                </div>
-            )}
-        </div>
+            {
+                !apiKey && (
+                    <div className="mt-3 flex items-center gap-2 text-amber-600 text-sm bg-amber-50 p-2 rounded-md border border-amber-100">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>API Key is required for AI validation features.</span>
+                    </div>
+                )
+            }
+        </div >
     );
 }

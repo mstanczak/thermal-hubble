@@ -432,6 +432,10 @@ export async function validateDGScreenShotWithGemini(
          - Quantity exceeding limits for the likely mode of transport (assume Ground if not specified, or infer from context like "FedEx Ground").
          - Missing required fields.
       
+      4. Apply the following strict validation rules:
+      ${localStorage.getItem('rule_emergency_contact') !== 'false' ? '- CRITICAL: Verify that a validated 24-hour emergency response telephone number is clearly present. If missing, mark as Fail.' : ''}
+      ${localStorage.getItem('rule_physical_labels') !== 'false' ? '- CRITICAL: Check for visual confirmation of required physical labels on the package (Orientation arrows, Cargo Aircraft Only stickers, Class Hazard Diamonds) if the image shows a physical box. If labels are missing or incorrect, mark as Fail.' : ''}
+      
       Return a JSON object with the following structure:
       {
         "status": "Pass" | "Fail" | "Warnings",
