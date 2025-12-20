@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, FileText, AlertCircle, Loader2, Check, AlertTriangle, XCircle } from 'lucide-react';
+import { Upload, FileText, AlertCircle, Loader2, Check, AlertTriangle, XCircle, Camera } from 'lucide-react';
 import { validateDGScreenShotWithGemini, type ValidationResult } from '../lib/gemini';
 import clsx from 'clsx';
 
@@ -11,6 +11,7 @@ export function DGValidator() {
     const [error, setError] = useState<string | null>(null);
     const [isFocused, setIsFocused] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -84,6 +85,17 @@ export function DGValidator() {
                     Upload a screenshot of your shipping software's Dangerous Goods tab (e.g., Piyovi, FedEx Ship Manager) to validate compliance.
                 </p>
 
+                <div className="flex justify-end mb-4">
+                    <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 w-full sm:w-auto justify-center"
+                    >
+                        <Camera className="w-4 h-4" />
+                        <span>Take Photo</span>
+                    </button>
+                </div>
+
                 <div
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -105,6 +117,14 @@ export function DGValidator() {
                         ref={fileInputRef}
                         type="file"
                         accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                    />
+                    <input
+                        ref={cameraInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
                         className="hidden"
                         onChange={handleFileSelect}
                     />
