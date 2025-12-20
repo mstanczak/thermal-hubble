@@ -5,7 +5,8 @@ Write-Host "=== Git Setup for thermal-hubble ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Navigate to the project directory
-Set-Location "C:\Users\mstan\Documents\Projects\thermal-hubble"
+# Navigate to the script's directory
+Set-Location $PSScriptRoot
 Write-Host "✓ Navigated to project directory" -ForegroundColor Green
 
 # Initialize git repository

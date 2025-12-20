@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backup files
+*.backup
+*.bak
+
+# Cloudflare Wrangler
+.wrangler/
