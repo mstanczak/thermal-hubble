@@ -20,31 +20,42 @@ export interface ValidationResult {
   status: 'Pass' | 'Fail' | 'Warnings';
   issues: ValidationIssue[];
   usage?: {
+    modelId: string;
     promptTokens: number;
     candidatesTokens: number;
     totalTokens: number;
+    inputCost: number;
+    outputCost: number;
     estimatedCost: number;
   };
 }
 
-function calculateCost(modelId: string, promptTokens: number, candidatesTokens: number): number {
-  let inputRate = 0.075; // Per 1M tokens
-  let outputRate = 0.30; // Per 1M tokens
+export function calculateCostDetails(modelId: string, promptTokens: number, candidatesTokens: number) {
+  let inputRate = 0.075; // Per 1M tokens (Flash 1.5 default)
+  let outputRate = 0.30;
 
-  if (modelId.includes("gemini-1.5-pro")) {
+  if (modelId.includes("pro")) {
     inputRate = 1.25;
     outputRate = 5.00;
-  } else if (modelId.includes("gemini-2.0-flash")) {
-    inputRate = 0.10;
-    outputRate = 0.40;
+  } else if (modelId.includes("2.0-flash") || modelId.includes("3-flash")) {
+    // 2.0 Flash currently matches 1.5 Flash pricing
+    inputRate = 0.075;
+    outputRate = 0.30;
   }
-  // Default to Flash 1.5/2.5 rates (already set)
 
   const inputCost = (promptTokens / 1_000_000) * inputRate;
   const outputCost = (candidatesTokens / 1_000_000) * outputRate;
 
-  return inputCost + outputCost;
+  return {
+    inputCost,
+    outputCost,
+    totalCost: inputCost + outputCost,
+    inputRate,
+    outputRate
+  };
 }
+
+
 
 import { MCPClientManager } from "./mcp";
 
@@ -454,11 +465,16 @@ export async function validateDGScreenShotWithGemini(
       const candidatesTokens = usageMetadata.candidatesTokenCount || 0;
       const totalTokens = usageMetadata.totalTokenCount || 0;
 
+      const costDetails = calculateCostDetails(modelId, promptTokens, candidatesTokens);
+
       resultData.usage = {
+        modelId,
         promptTokens,
         candidatesTokens,
         totalTokens,
-        estimatedCost: calculateCost(modelId, promptTokens, candidatesTokens)
+        inputCost: costDetails.inputCost,
+        outputCost: costDetails.outputCost,
+        estimatedCost: costDetails.totalCost
       };
     }
 

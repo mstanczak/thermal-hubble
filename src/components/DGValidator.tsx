@@ -1,9 +1,15 @@
 import { useState, useRef } from 'react';
-import { Upload, FileText, AlertCircle, Loader2, Check, AlertTriangle, XCircle, Camera } from 'lucide-react';
-import { validateDGScreenShotWithGemini, type ValidationResult } from '../lib/gemini';
+import { Upload, FileText, AlertCircle, Loader2, Check, AlertTriangle, XCircle, Camera, Info } from 'lucide-react';
+import { validateDGScreenShotWithGemini, type ValidationResult, calculateCostDetails } from '../lib/gemini';
 import clsx from 'clsx';
 
 export function DGValidator() {
+    const MODELS_FOR_COMPARISON = [
+        { id: 'gemini-1.5-flash', name: '1.5 Flash' },
+        { id: 'gemini-2.0-flash', name: '2.0 Flash' },
+        { id: 'gemini-1.5-pro', name: '1.5 Pro' }
+    ];
+
     const [isDragging, setIsDragging] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<'idle' | 'analyzing' | 'complete' | 'error'>('idle');
@@ -183,9 +189,9 @@ export function DGValidator() {
 
             {/* Results Display */}
             {result && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                     <div className={clsx(
-                        "p-4 border-b flex justify-between items-center",
+                        "p-4 border-b flex justify-between items-center rounded-t-xl",
                         result.status === 'Pass' ? "bg-green-50 border-green-100" :
                             result.status === 'Fail' ? "bg-red-50 border-red-100" :
                                 "bg-amber-50 border-amber-100"
@@ -203,14 +209,52 @@ export function DGValidator() {
                         </h4>
 
                         {result.usage && (
-                            <div className="flex items-center gap-4 text-xs">
-                                <span className="bg-white/60 px-2 py-1 rounded-md text-gray-600 border border-black/5 font-mono">
-                                    {result.usage.totalTokens.toLocaleString()} Tokens
-                                </span>
-                                <span className="bg-white/60 px-2 py-1 rounded-md text-gray-800 border border-black/5 font-semibold font-mono flex items-center gap-1">
+                            <div className="group relative flex items-center gap-4 text-xs">
+                                <div className="flex items-center gap-2 bg-white/60 px-2 py-1 rounded-md text-gray-800 border border-black/5 font-semibold font-mono cursor-help">
                                     <span className="text-gray-400">$</span>
                                     {result.usage.estimatedCost.toFixed(5)}
-                                </span>
+                                    <Info className="w-3 h-3 text-gray-400" />
+                                </div>
+
+                                {/* Hover Tooltip Card */}
+                                <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute right-0 bottom-full mb-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+                                    <h5 className="font-bold text-gray-900 mb-2 border-b pb-1">Cost Breakdown</h5>
+
+                                    <div className="space-y-1 mb-3">
+                                        <div className="flex justify-between text-[10px] text-gray-500">
+                                            <span>Model:</span>
+                                            <span className="font-medium text-blue-600">{result.usage.modelId}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                            <span>Input ({result.usage.promptTokens})</span>
+                                            <span>${result.usage.inputCost.toFixed(5)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                            <span>Output ({result.usage.candidatesTokens})</span>
+                                            <span>${result.usage.outputCost.toFixed(5)}</span>
+                                        </div>
+                                    </div>
+
+                                    <h5 className="font-bold text-gray-900 mb-2 border-b pb-1">Price Comparison</h5>
+                                    <div className="space-y-1 text-[11px]">
+                                        {MODELS_FOR_COMPARISON.map(m => {
+                                            const comparison = calculateCostDetails(m.id, result.usage!.promptTokens, result.usage!.candidatesTokens);
+                                            const isCurrent = result.usage!.modelId.includes(m.id);
+                                            return (
+                                                <div key={m.id} className={clsx("flex justify-between", isCurrent && "text-blue-600 font-bold")}>
+                                                    <span>{m.name} {isCurrent && "(current)"}</span>
+                                                    <span>
+                                                        ${comparison.totalCost.toFixed(5)}{" "}
+                                                        <span className="text-[9px] text-gray-400 font-normal">
+                                                            (${comparison.inputCost.toFixed(5)} + ${comparison.outputCost.toFixed(5)})
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="absolute w-3 h-3 bg-white border-r border-b border-gray-200 rotate-45 -bottom-1.5 right-6"></div>
+                                </div>
                             </div>
                         )}
                     </div>
