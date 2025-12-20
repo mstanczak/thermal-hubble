@@ -179,7 +179,7 @@ export function DGValidator() {
             {result && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className={clsx(
-                        "p-4 border-b",
+                        "p-4 border-b flex justify-between items-center",
                         result.status === 'Pass' ? "bg-green-50 border-green-100" :
                             result.status === 'Fail' ? "bg-red-50 border-red-100" :
                                 "bg-amber-50 border-amber-100"
@@ -195,6 +195,18 @@ export function DGValidator() {
                                     <AlertTriangle className="w-5 h-5" />}
                             Analysis Report
                         </h4>
+
+                        {result.usage && (
+                            <div className="flex items-center gap-4 text-xs">
+                                <span className="bg-white/60 px-2 py-1 rounded-md text-gray-600 border border-black/5 font-mono">
+                                    {result.usage.totalTokens.toLocaleString()} Tokens
+                                </span>
+                                <span className="bg-white/60 px-2 py-1 rounded-md text-gray-800 border border-black/5 font-semibold font-mono flex items-center gap-1">
+                                    <span className="text-gray-400">$</span>
+                                    {result.usage.estimatedCost.toFixed(5)}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="p-6">

@@ -19,6 +19,31 @@ export interface ValidationIssue {
 export interface ValidationResult {
   status: 'Pass' | 'Fail' | 'Warnings';
   issues: ValidationIssue[];
+  usage?: {
+    promptTokens: number;
+    candidatesTokens: number;
+    totalTokens: number;
+    estimatedCost: number;
+  };
+}
+
+function calculateCost(modelId: string, promptTokens: number, candidatesTokens: number): number {
+  let inputRate = 0.075; // Per 1M tokens
+  let outputRate = 0.30; // Per 1M tokens
+
+  if (modelId.includes("gemini-1.5-pro")) {
+    inputRate = 1.25;
+    outputRate = 5.00;
+  } else if (modelId.includes("gemini-2.0-flash")) {
+    inputRate = 0.10;
+    outputRate = 0.40;
+  }
+  // Default to Flash 1.5/2.5 rates (already set)
+
+  const inputCost = (promptTokens / 1_000_000) * inputRate;
+  const outputCost = (candidatesTokens / 1_000_000) * outputRate;
+
+  return inputCost + outputCost;
 }
 
 import { MCPClientManager } from "./mcp";
@@ -420,7 +445,24 @@ export async function validateDGScreenShotWithGemini(
     const text = response.text();
 
     const jsonString = text.replace(/```json\n|\n```/g, "").trim();
-    return JSON.parse(jsonString) as ValidationResult;
+    const resultData = JSON.parse(jsonString) as ValidationResult;
+
+    // Add usage metadata if available
+    const usageMetadata = response.usageMetadata;
+    if (usageMetadata) {
+      const promptTokens = usageMetadata.promptTokenCount || 0;
+      const candidatesTokens = usageMetadata.candidatesTokenCount || 0;
+      const totalTokens = usageMetadata.totalTokenCount || 0;
+
+      resultData.usage = {
+        promptTokens,
+        candidatesTokens,
+        totalTokens,
+        estimatedCost: calculateCost(modelId, promptTokens, candidatesTokens)
+      };
+    }
+
+    return resultData;
   } catch (error: any) {
     console.error("DG Screenshot Validation Error:", error);
     throw new Error(`Validation failed: ${error.message}`);

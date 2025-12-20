@@ -15,7 +15,11 @@
 - **External Context (MCP):** Connect to **Model Context Protocol (MCP)** servers to fetch real-time regulatory updates or external database records.
 - **Influence Control:** Assign "Weights" (0-100%) to different sources. Tell the AI to trust your "Strict SOP" (100%) over a "General Guideline" (50%).
 
-### 3. ⚡ Optimized for Warehouse Velocity
+### 3. 💰 Cost & Efficiency Insights (New)
+- **Real-Time Cost Estimation:** Displays the estimated cost of every AI analysis based on token usage.
+- **Transparent Audit Trail:** Token counts and pricing are shown on every validation report, helping you manage API quotas and understand the efficiency of different models (e.g., Flash vs. Pro).
+
+### 4. ⚡ Optimized for Warehouse Velocity
 - **Paste Support:** "Just paste" functionality (Ctrl+V) for rapid screenshot validation.
 - **Offline-First:** Heavy documents are stored locally in **IndexedDB** for instant access without re-uploading.
 - **Privacy Focused:** User data and API keys stay in user's LocalStorage; documents stay in your browser.
