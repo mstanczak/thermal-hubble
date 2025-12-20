@@ -65,4 +65,15 @@ export const REGULATION_RULES = {
             "Specific prohibitions on certain explosives and toxic substances."
         ]
     }
+}
+
+
+export const UN_LIMITS: Record<string, { airPassenger: number; airCargo: number; unit: string }> = {
+    'UN1263': { airPassenger: 5, airCargo: 60, unit: 'L' }, // Paint
+    'UN1950': { airPassenger: 75, airCargo: 150, unit: 'kg' }, // Aerosols (qty limit usually net weight)
+    'UN3480': { airPassenger: 0, airCargo: 35, unit: 'kg' }, // Li-ion (Forbidden on PAX usually, 35kg CAO)
+    'UN1760': { airPassenger: 1, airCargo: 30, unit: 'L' }, // Corrosive liquid n.o.s. (PG II assumption)
+    'UN1993': { airPassenger: 5, airCargo: 60, unit: 'L' }, // Flammable liquid n.o.s.
+    'UN3373': { airPassenger: 4, airCargo: 4, unit: 'L' }, // Bio substance (4L/4kg max)
+    'UN1845': { airPassenger: 200, airCargo: 200, unit: 'kg' }, // Dry Ice (Airline specific, but 200kg is a common threshold)
 };
