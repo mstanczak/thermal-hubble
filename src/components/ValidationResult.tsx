@@ -1,10 +1,93 @@
-import type { ValidationResult, ValidationIssue } from '../lib/gemini';
-import { CheckCircle, AlertTriangle, Info, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import type { ValidationResult, ValidationIssue, ValidationMetadata } from '../lib/gemini';
+import { CheckCircle, AlertTriangle, Info, XCircle, ChevronDown, ChevronUp, Database, FileText, BrainCircuit } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
 
 interface ValidationResultProps {
     result: ValidationResult;
+}
+
+export function ValidationIntelligence({ metadata }: { metadata: ValidationMetadata }) {
+    const [expanded, setExpanded] = useState(false);
+    const [showFullPrompt, setShowFullPrompt] = useState(false);
+
+    if (!metadata) return null;
+
+    const truncatedPrompt = metadata.promptTemplate.length > 500
+        ? metadata.promptTemplate.substring(0, 500) + "..."
+        : metadata.promptTemplate;
+
+    return (
+        <div className="mt-8 border-t border-gray-200 pt-6">
+            <button
+                onClick={() => setExpanded(!expanded)}
+                className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors w-full"
+            >
+                <BrainCircuit className="w-4 h-4" />
+                Validation Intelligence & Sources
+                {expanded ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
+            </button>
+
+            {expanded && (
+                <div className="mt-4 space-y-6 animate-in slide-in-from-top-2">
+                    {/* Sources Section */}
+                    <div>
+                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Context Sources Utilized</h4>
+                        <div className="grid gap-2">
+                            {metadata.sourcesUsed.length === 0 ? (
+                                <p className="text-sm text-gray-500 italic">No external context or local documents were used for this analysis. (Pure model knowledge)</p>
+                            ) : (
+                                metadata.sourcesUsed.map((source, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-100 rounded text-sm">
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                            {source.sourceType === 'MCP' ? (
+                                                <Database className="w-3.5 h-3.5 text-purple-500" />
+                                            ) : (
+                                                <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                                            )}
+                                            <span className="truncate font-medium text-gray-700" title={source.sourceName}>{source.sourceName}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-gray-500">{source.sourceType}</span>
+                                            <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-mono">
+                                                {source.weight}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Prompt Logic Section */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">System Prompt Logic</h4>
+                            <button
+                                onClick={() => setShowFullPrompt(!showFullPrompt)}
+                                className="text-xs text-blue-600 hover:underline"
+                            >
+                                {showFullPrompt ? "Collapse" : "Expand Full Prompt"}
+                            </button>
+                        </div>
+                        <div className="bg-gray-900 rounded-lg p-3 overflow-hidden group relative">
+                            <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
+                                {showFullPrompt ? metadata.promptTemplate : truncatedPrompt}
+                            </pre>
+                            <div className="absolute top-2 right-2 px-2 py-1 bg-gray-800 rounded text-[10px] text-gray-400 border border-gray-700">
+                                Model: {metadata.modelId}
+                            </div>
+                        </div>
+                        {!showFullPrompt && (
+                            <p className="text-[10px] text-gray-400 mt-1">
+                                * This is a truncated view. Click "Expand" to see the full prompt logic.
+                            </p>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }
 
 function IssueCard({ issue }: { issue: ValidationIssue }) {
@@ -86,7 +169,7 @@ export function ValidationResultCard({ result }: ValidationResultProps) {
     }[result.status];
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
             <div className={clsx("p-6 rounded-xl border flex items-center gap-4", statusColor)}>
                 {statusIcon}
                 <div>
@@ -104,6 +187,9 @@ export function ValidationResultCard({ result }: ValidationResultProps) {
                     <IssueCard key={index} issue={issue} />
                 ))}
             </div>
+
+            {/* Intelligence Footer */}
+            {result.metadata && <ValidationIntelligence metadata={result.metadata} />}
         </div>
     );
 }

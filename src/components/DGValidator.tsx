@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, FileText, AlertCircle, Loader2, Check, AlertTriangle, XCircle, Camera, Info } from 'lucide-react';
 import { validateDGScreenShotWithGemini, type ValidationResult, calculateCostDetails } from '../lib/gemini';
+import { ValidationIntelligence } from './ValidationResult';
 import clsx from 'clsx';
 
 export function DGValidator() {
@@ -311,6 +312,9 @@ export function DGValidator() {
                                 ))}
                             </div>
                         )}
+
+                        {/* Intelligence Footer */}
+                        {result.metadata && <ValidationIntelligence metadata={result.metadata} />}
                     </div>
                 </div>
             )}

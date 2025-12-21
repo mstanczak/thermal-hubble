@@ -9,6 +9,14 @@ export interface MCPServerConfig {
     weight: number; // 0-100
 }
 
+export interface SourceContext {
+    sourceName: string;
+    sourceType: 'MCP' | 'Local' | 'System';
+    content: string;
+    weight: number;
+    uri?: string;
+}
+
 export class MCPClientManager {
     private static instance: MCPClientManager;
     private clients: Map<string, Client> = new Map();
@@ -77,20 +85,22 @@ export class MCPClientManager {
         }
     }
 
+
+
     /**
      * Fetches context from all enabled MCP servers stored in localStorage.
-     * It lists resources and then reads the content of each resource.
+     * Returns structured SourceContext objects.
      */
-    public async fetchContextFromServers(): Promise<string> {
+    public async fetchContextFromServers(): Promise<SourceContext[]> {
         const configsStr = localStorage.getItem('mcp_servers');
-        if (!configsStr) return "";
+        if (!configsStr) return [];
 
         const configs: MCPServerConfig[] = JSON.parse(configsStr);
         const enabledServers = configs.filter(c => c.enabled);
 
-        if (enabledServers.length === 0) return "";
+        if (enabledServers.length === 0) return [];
 
-        let aggregatedContext = "";
+        const contexts: SourceContext[] = [];
 
         await Promise.all(enabledServers.map(async (server) => {
             try {
@@ -105,21 +115,30 @@ export class MCPClientManager {
                     const contentResult = await client.readResource({ uri: resource.uri });
 
                     for (const content of contentResult.contents) {
-                        aggregatedContext += `\n--- SOURCE: ${server.name} (${resource.name}) ---\n`;
+                        let textContent = "";
                         if ('text' in content) {
-                            aggregatedContext += content.text + "\n";
+                            textContent = content.text;
                         } else {
-                            aggregatedContext += `[Binary data: ${content.mimeType}]\n`;
+                            textContent = `[Binary data: ${content.mimeType}]`;
                         }
+
+                        contexts.push({
+                            sourceName: `${server.name} (${resource.name})`,
+                            sourceType: 'MCP',
+                            content: textContent,
+                            weight: server.weight,
+                            uri: resource.uri
+                        });
                     }
                 }
 
             } catch (err) {
                 console.warn(`[MCP] Could not fetch from ${server.name}:`, err);
-                aggregatedContext += `\n[MCP Error] Failed to fetch data from ${server.name}\n`;
+                // Optionally push an error context so the UI knows something failed?
+                // For now, we'll just log it. 
             }
         }));
 
-        return aggregatedContext;
+        return contexts;
     }
 }

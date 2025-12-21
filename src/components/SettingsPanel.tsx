@@ -225,9 +225,9 @@ export function SettingsPanel() {
         localStorage.removeItem('rule_emergency_contact');
         localStorage.removeItem('rule_physical_labels');
         setApiKey('');
-        setSuggestionModel('gemini-2.5-flash');
+        setSuggestionModel('gemini-3-flash-preview');
         setValidationModel('gemini-2.5-flash');
-        setOcrModel('gemini-2.5-flash');
+        setOcrModel('gemini-3-flash-preview');
         setSignatoryName('');
         setSignatoryTitle('');
         setSignatoryPlace('');

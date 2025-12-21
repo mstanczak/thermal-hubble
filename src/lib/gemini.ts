@@ -19,6 +19,7 @@ export interface ValidationIssue {
 export interface ValidationResult {
   status: 'Pass' | 'Fail' | 'Warnings';
   issues: ValidationIssue[];
+  metadata?: ValidationMetadata;
   usage?: {
     modelId: string;
     promptTokens: number;
@@ -57,7 +58,13 @@ export function calculateCostDetails(modelId: string, promptTokens: number, cand
 
 
 
-import { MCPClientManager } from "./mcp";
+import { MCPClientManager, type SourceContext } from "./mcp";
+
+export interface ValidationMetadata {
+  promptTemplate: string;
+  sourcesUsed: SourceContext[];
+  modelId: string;
+}
 
 export async function validateShipmentWithGemini(
   data: HazmatFormData,
@@ -70,31 +77,35 @@ export async function validateShipmentWithGemini(
 
     // Fetch external context from MCP servers
     const mcpManager = MCPClientManager.getInstance();
-    const mcpContext = await mcpManager.fetchContextFromServers(); // Note: MCP fetching needs update to return objects with weights, or we parse the string. 
-    // For now, let's assume mcpContext is a string, but ideally we'd want structured data.
-    // However, given the current mcp.ts implementation returns a string, we might need to refactor mcp.ts OR just append local docs.
+    const mcpSources = await mcpManager.fetchContextFromServers();
 
-    // Actually, let's fetch local docs and append them with their weights.
+    // Fetch and format local documents
     const localDocs = await StorageManager.getAllDocuments();
-    let externalContext = mcpContext; // Start with MCP context (legacy/string based)
+    const localSources: SourceContext[] = localDocs.map(doc => ({
+      sourceName: doc.name,
+      sourceType: 'Local',
+      content: doc.content,
+      weight: doc.weight,
+      uri: `local://${doc.id}`
+    }));
 
-    if (localDocs.length > 0) {
-      externalContext += "\n\n--- LOCAL DOCUMENTS (Weighted Context) ---\n";
-      // Sort by weight desc
-      localDocs.sort((a, b) => b.weight - a.weight);
+    // Combine and sort sources by weight
+    const allSources = [...mcpSources, ...localSources].sort((a, b) => b.weight - a.weight);
 
-      for (const doc of localDocs) {
-        externalContext += `\n[SOURCE: ${doc.name} (Weight: ${doc.weight}%)]\n${doc.content}\n`;
+    // Construct external context string for the prompt
+    let externalContext = "";
+    if (allSources.length > 0) {
+      externalContext += "\n\n--- EXTERNAL CONTEXT & KNOWLEDGE BASE ---\n";
+      for (const source of allSources) {
+        externalContext += `\n[SOURCE: ${source.sourceName} (Type: ${source.sourceType}, Weight: ${source.weight}%)]\n${source.content}\n`;
       }
     }
 
-    const prompt = `
+    const promptTemplate = `
       You are a hazmat shipping compliance expert. Analyze this dangerous goods shipment for compliance with [IATA/DOT 49 CFR] regulations and [FedEx/UPS] carrier-specific requirements.
 
       Use the following external context if relevant. Pay close attention to sources with higher weights (e.g., 90-100%).
-      ${externalContext}
-
-
+      <EXTERNAL_CONTEXT_PLACEHOLDER>
 
       Shipment Details:
       - Carrier: ${data.carrier}
@@ -142,7 +153,10 @@ export async function validateShipmentWithGemini(
       }
     `;
 
-    const result = await model.generateContent(prompt);
+    // Inject the actual context
+    const finalPrompt = promptTemplate.replace('<EXTERNAL_CONTEXT_PLACEHOLDER>', externalContext);
+
+    const result = await model.generateContent(finalPrompt);
     const response = await result.response;
     const text = response.text();
 
@@ -150,7 +164,17 @@ export async function validateShipmentWithGemini(
     const jsonString = text.replace(/```json\n|\n```/g, "").trim();
 
     try {
-      return JSON.parse(jsonString) as ValidationResult;
+      const parsedResult = JSON.parse(jsonString) as ValidationResult;
+
+      // Attach metadata for transparency
+      // Attach metadata for transparency
+      parsedResult.metadata = {
+        promptTemplate: promptTemplate, // Send full prompt, let UI handle truncation
+        sourcesUsed: allSources,
+        modelId: modelId
+      };
+
+      return parsedResult;
     } catch (e) {
       console.error("Failed to parse JSON:", jsonString);
       throw new Error("Invalid response format from AI model");
@@ -276,7 +300,7 @@ async function convertPdfToImages(file: File): Promise<string[]> {
   return images;
 }
 
-async function extractDataFromText(text: string, apiKey: string, modelId: string = 'gemini-2.5-flash'): Promise<Partial<HazmatFormData> & { confidence?: Record<string, number> }> {
+async function extractDataFromText(text: string, apiKey: string, modelId: string = 'gemini-3-flash-preview'): Promise<Partial<HazmatFormData> & { confidence?: Record<string, number> }> {
   const genAI = new GoogleGenerativeAI(apiKey);
   // Use user selected model
   const model = genAI.getGenerativeModel({ model: modelId });
@@ -347,7 +371,7 @@ export async function getFieldSuggestions(
   data: HazmatFormData,
   fieldName: string,
   apiKey: string,
-  modelId: string = "gemini-1.5-flash"
+  modelId: string = "gemini-3-flash-preview"
 ): Promise<Suggestion[]> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -355,16 +379,26 @@ export async function getFieldSuggestions(
 
     // Fetch external context from MCP servers
     const mcpManager = MCPClientManager.getInstance();
-    const mcpContext = await mcpManager.fetchContextFromServers();
+    const mcpSources = await mcpManager.fetchContextFromServers();
 
     const localDocs = await StorageManager.getAllDocuments();
-    let externalContext = mcpContext;
 
-    if (localDocs.length > 0) {
-      externalContext += "\n\n--- LOCAL DOCUMENTS (Weighted Context) ---\n";
-      localDocs.sort((a, b) => b.weight - a.weight);
-      for (const doc of localDocs) {
-        externalContext += `\n[SOURCE: ${doc.name} (Weight: ${doc.weight}%)]\n${doc.content}\n`;
+    // Convert local docs to SourceContext
+    const localSources: SourceContext[] = localDocs.map(doc => ({
+      sourceName: doc.name,
+      sourceType: 'Local',
+      content: doc.content,
+      weight: doc.weight,
+      uri: `local://${doc.id}`
+    }));
+
+    const allSources = [...mcpSources, ...localSources].sort((a, b) => b.weight - a.weight);
+
+    let externalContext = "";
+    if (allSources.length > 0) {
+      externalContext += "\n\n--- EXTERNAL CONTEXT ---\n";
+      for (const source of allSources) {
+        externalContext += `\n[SOURCE: ${source.sourceName} (Type: ${source.sourceType}, Weight: ${source.weight}%)]\n${source.content}\n`;
       }
     }
 
@@ -412,7 +446,7 @@ export async function getFieldSuggestions(
 export async function validateDGScreenShotWithGemini(
   file: File,
   apiKey: string,
-  modelId: string = "gemini-1.5-flash"
+  modelId: string = "gemini-3-flash-preview"
 ): Promise<ValidationResult> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -481,6 +515,13 @@ export async function validateDGScreenShotWithGemini(
         estimatedCost: costDetails.totalCost
       };
     }
+
+    // Attach metadata for transparency
+    resultData.metadata = {
+      promptTemplate: prompt,
+      sourcesUsed: [], // DG Validator currently doesn't use external context, but we list it as empty for consistency
+      modelId: modelId
+    };
 
     return resultData;
   } catch (error: any) {
