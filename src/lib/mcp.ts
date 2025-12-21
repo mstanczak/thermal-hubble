@@ -26,9 +26,13 @@ export class MCPClientManager {
      * Connects to a specific SSE MCP Server.
      * Note: Browser-based connections require the server to support SSE.
      */
-    public async connectToServer(url: string): Promise<Client> {
+    public async connectToServer(url: string, timeoutMs: number = 15000): Promise<Client> {
         if (this.clients.has(url)) {
-            return this.clients.get(url)!;
+            const existing = this.clients.get(url)!;
+            // If we have a client, we should verified it's actually connected? 
+            // The SDK doesn't expose a simple 'isConnected' check easily without trying to use it.
+            // For now, if we have it, return it.
+            return existing;
         }
 
         // In a real browser implementation, you'd handle potentially multiple transports.
@@ -45,12 +49,30 @@ export class MCPClientManager {
         );
 
         try {
-            await client.connect(transport);
+            // Race the connection against a timeout
+            await Promise.race([
+                client.connect(transport),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error(`Connection timed out after ${timeoutMs}ms`)), timeoutMs)
+                )
+            ]);
+
             this.clients.set(url, client);
             console.log(`[MCP] Connected to ${url}`);
             return client;
-        } catch (err) {
+        } catch (err: any) {
             console.error(`[MCP] Failed to connect to ${url}`, err);
+            // Ensure we clean up if it failed halfway
+            try { await client.close(); } catch { }
+
+            // Return a clean error message
+            if (err.message && err.message.includes("timed out")) {
+                throw new Error("Connection timed out. The server is not responding.");
+            }
+            if (err instanceof TypeError && err.message.includes("Failed to fetch")) {
+                throw new Error("Connection refused. Is the server running and CORS enabled?");
+            }
+
             throw err;
         }
     }

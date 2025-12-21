@@ -20,8 +20,8 @@ export function SettingsPanel() {
     const [offerorName, setOfferorName] = useState('');
 
     // Validation Rules State
-    const [ruleEmergencyContact, setRuleEmergencyContact] = useState(true);
-    const [rulePhysicalLabels, setRulePhysicalLabels] = useState(true);
+    const [ruleEmergencyContact, setRuleEmergencyContact] = useState(false);
+    const [rulePhysicalLabels, setRulePhysicalLabels] = useState(false);
 
     const MODELS = [
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', description: 'Fastest reasoning. Best for speed.' },
@@ -35,8 +35,10 @@ export function SettingsPanel() {
     const [mcpServers, setMcpServers] = useState<MCPServerConfig[]>([]);
     const [newMcpUrl, setNewMcpUrl] = useState('');
     const [newMcpName, setNewMcpName] = useState('');
-    const [isTestingMcp, setIsTestingMcp] = useState(false);
-    const [mcpTestResult, setMcpTestResult] = useState<{ success: boolean; msg: string } | null>(null);
+
+    // Track which URL is currently being tested
+    const [testingUrl, setTestingUrl] = useState<string | null>(null);
+    const [mcpTestResult, setMcpTestResult] = useState<{ url: string; success: boolean; msg: string } | null>(null);
     const [showMcpHelp, setShowMcpHelp] = useState(false);
 
     // Document State
@@ -110,6 +112,7 @@ export function SettingsPanel() {
         setMcpServers(updated);
         setNewMcpName('');
         setNewMcpUrl('');
+        setMcpTestResult(null); // Clear previous test result
     };
 
     const removeMcpServer = (index: number) => {
@@ -124,16 +127,20 @@ export function SettingsPanel() {
     };
 
     const testMcpConnection = async (url: string) => {
-        setIsTestingMcp(true);
+        setTestingUrl(url);
         setMcpTestResult(null);
         try {
             const manager = MCPClientManager.getInstance();
             await manager.connectToServer(url);
-            setMcpTestResult({ success: true, msg: "Connected successfully!" });
-        } catch (err) {
-            setMcpTestResult({ success: false, msg: "Connection failed. Ensure server supports SSE." });
+            setMcpTestResult({ url, success: true, msg: "Connected successfully!" });
+        } catch (err: any) {
+            setMcpTestResult({
+                url,
+                success: false,
+                msg: err.message || "Connection failed. Ensure server supports SSE."
+            });
         } finally {
-            setIsTestingMcp(false);
+            setTestingUrl(null);
         }
     };
 
@@ -226,8 +233,8 @@ export function SettingsPanel() {
         setSignatoryPlace('');
         setEmergencyPhone('');
         setOfferorName('');
-        setRuleEmergencyContact(true);
-        setRulePhysicalLabels(true);
+        setRuleEmergencyContact(false);
+        setRulePhysicalLabels(false);
         setStatus('cleared');
         setTimeout(() => setStatus('idle'), 2000);
     };
@@ -412,6 +419,14 @@ export function SettingsPanel() {
                                 className="flex-[2] px-3 py-2 border border-gray-300 rounded-lg text-sm"
                             />
                             <button
+                                onClick={() => testMcpConnection(newMcpUrl)}
+                                disabled={!newMcpUrl || testingUrl === newMcpUrl}
+                                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                                title="Test before adding"
+                            >
+                                <RefreshCw className={clsx("w-5 h-5", testingUrl === newMcpUrl && "animate-spin")} />
+                            </button>
+                            <button
                                 onClick={addMcpServer}
                                 disabled={!newMcpName || !newMcpUrl}
                                 className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
@@ -421,37 +436,55 @@ export function SettingsPanel() {
                         </div>
                     </div>
 
+                    {/* Test result for the "New Server" input specifically */}
+                    {mcpTestResult && mcpTestResult.url === newMcpUrl && !mcpServers.find(s => s.url === newMcpUrl) && (
+                        <div className={clsx("mb-4 text-sm p-3 rounded-lg flex items-center gap-2", mcpTestResult.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>
+                            {mcpTestResult.success ? <CheckCircle className="w-4 h-4" /> : <Info className="w-4 h-4" />}
+                            {mcpTestResult.msg}
+                        </div>
+                    )}
+
                     <div className="space-y-3">
                         {mcpServers.map((server, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <input
-                                        type="checkbox"
-                                        checked={server.enabled}
-                                        onChange={() => toggleMcpServer(idx)}
-                                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                    />
-                                    <div className="min-w-0">
-                                        <p className="font-medium text-sm text-gray-900 truncate">{server.name}</p>
-                                        <p className="text-xs text-gray-500 truncate">{server.url}</p>
+                            <div key={idx} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <input
+                                            type="checkbox"
+                                            checked={server.enabled}
+                                            onChange={() => toggleMcpServer(idx)}
+                                            className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                        />
+                                        <div className="min-w-0">
+                                            <p className="font-medium text-sm text-gray-900 truncate">{server.name}</p>
+                                            <p className="text-xs text-gray-500 truncate">{server.url}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => testMcpConnection(server.url)}
+                                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                            title="Test Connection"
+                                            disabled={testingUrl === server.url}
+                                        >
+                                            <RefreshCw className={clsx("w-4 h-4", testingUrl === server.url && "animate-spin")} />
+                                        </button>
+                                        <button
+                                            onClick={() => removeMcpServer(idx)}
+                                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                            title="Remove Server"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => testMcpConnection(server.url)}
-                                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                        title="Test Connection"
-                                    >
-                                        <RefreshCw className={clsx("w-4 h-4", isTestingMcp && "animate-spin")} />
-                                    </button>
-                                    <button
-                                        onClick={() => removeMcpServer(idx)}
-                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                        title="Remove Server"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                {/* Per-server test result */}
+                                {mcpTestResult && mcpTestResult.url === server.url && (
+                                    <div className={clsx("text-xs p-2 rounded flex items-center gap-2", mcpTestResult.success ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+                                        {mcpTestResult.success ? <CheckCircle className="w-3 h-3" /> : <Info className="w-3 h-3" />}
+                                        {mcpTestResult.msg}
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {mcpServers.length === 0 && (
@@ -460,13 +493,6 @@ export function SettingsPanel() {
                             </div>
                         )}
                     </div>
-
-                    {mcpTestResult && (
-                        <div className={clsx("mt-4 text-sm p-3 rounded-lg flex items-center gap-2", mcpTestResult.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>
-                            {mcpTestResult.success ? <CheckCircle className="w-4 h-4" /> : <Info className="w-4 h-4" />}
-                            {mcpTestResult.msg}
-                        </div>
-                    )}
                 </div>
 
                 {/* Local Documents */}
