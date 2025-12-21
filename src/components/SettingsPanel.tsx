@@ -12,6 +12,7 @@ export function SettingsPanel() {
     const [status, setStatus] = useState<'idle' | 'saved' | 'cleared'>('idle');
     const [suggestionModel, setSuggestionModel] = useState('gemini-3-flash-preview');
     const [validationModel, setValidationModel] = useState('gemini-2.5-flash');
+    const [screenshotModel, setScreenshotModel] = useState('gemini-3-flash-preview');
     const [ocrModel, setOcrModel] = useState('gemini-3-flash-preview');
     const [signatoryName, setSignatoryName] = useState('');
     const [signatoryTitle, setSignatoryTitle] = useState('');
@@ -59,6 +60,9 @@ export function SettingsPanel() {
 
         const storedValidationModel = localStorage.getItem('gemini_model_validation');
         setValidationModel(storedValidationModel || legacyModel);
+
+        const storedScreenshotModel = localStorage.getItem('gemini_model_screenshot');
+        setScreenshotModel(storedScreenshotModel || 'gemini-3-flash-preview');
 
         const storedOcrModel = localStorage.getItem('gemini_model_ocr');
         setOcrModel(storedOcrModel || 'gemini-3-flash-preview');
@@ -188,6 +192,7 @@ export function SettingsPanel() {
             localStorage.setItem('gemini_api_key', apiKey.trim());
             localStorage.setItem('gemini_model_suggestions', suggestionModel);
             localStorage.setItem('gemini_model_validation', validationModel);
+            localStorage.setItem('gemini_model_screenshot', screenshotModel);
             localStorage.setItem('gemini_model_ocr', ocrModel);
 
             localStorage.setItem('mcp_servers', JSON.stringify(mcpServers));
@@ -215,6 +220,7 @@ export function SettingsPanel() {
         localStorage.removeItem('gemini_model');
         localStorage.removeItem('gemini_model_suggestions');
         localStorage.removeItem('gemini_model_validation');
+        localStorage.removeItem('gemini_model_screenshot');
         localStorage.removeItem('gemini_model_ocr');
 
         localStorage.removeItem('default_signatory_name');
@@ -227,6 +233,7 @@ export function SettingsPanel() {
         setApiKey('');
         setSuggestionModel('gemini-3-flash-preview');
         setValidationModel('gemini-2.5-flash');
+        setScreenshotModel('gemini-3-flash-preview');
         setOcrModel('gemini-3-flash-preview');
         setSignatoryName('');
         setSignatoryTitle('');
@@ -310,6 +317,22 @@ export function SettingsPanel() {
                             ))}
                         </select>
                         <p className="text-xs text-gray-500 mt-1">For shipment validation</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Screenshot Model</label>
+                        <select
+                            value={screenshotModel}
+                            onChange={(e) => setScreenshotModel(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        >
+                            {MODELS.map(model => (
+                                <option key={model.id} value={model.id}>
+                                    {model.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">For DG form screenshot analysis</p>
                     </div>
 
                     <div>

@@ -64,6 +64,7 @@ export interface ValidationMetadata {
   promptTemplate: string;
   sourcesUsed: SourceContext[];
   modelId: string;
+  extractedData?: Record<string, string | number | null>;
 }
 
 export async function validateShipmentWithGemini(
@@ -529,6 +530,15 @@ export async function validateDGScreenShotWithGemini(
       
       Return a JSON object with the following structure:
       {
+        "extractedData": {
+           "unNumber": "string",
+           "properShippingName": "string",
+           "hazardClass": "string",
+           "packingGroup": "string",
+           "quantity": "string",
+           "emergencyPhone": "string | null",
+           "labelsVisible": "string[]"
+        },
         "status": "Pass" | "Fail" | "Warnings",
         "issues": [
           {
@@ -577,7 +587,15 @@ export async function validateDGScreenShotWithGemini(
     resultData.metadata = {
       promptTemplate: prompt,
       sourcesUsed: allContext,
-      modelId: modelId
+      modelId: modelId,
+      // @ts-ignore - Assuming the model follows instructions and puts extractedData in the root result, 
+      // OR we need to update ValidationResult to have it. 
+      // The prompt asks for it at the top level of the JSON.
+      // So resultData (which is parsed JSON) should have it.
+      // But ValidationResult interface doesn't have it on root.
+      // Wait, the prompt instruction says: "Return a JSON object with the following structure: { extractedData: ... }"
+      // So resultData will have it. I should assign it here.
+      extractedData: (resultData as any).extractedData
     };
 
     return resultData;

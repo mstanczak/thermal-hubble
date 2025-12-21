@@ -62,6 +62,41 @@ export function ValidationIntelligence({ metadata }: { metadata: ValidationMetad
                         </div>
                     </div>
 
+                    {/* Extracted Data Section */}
+                    {metadata.extractedData && Object.keys(metadata.extractedData).length > 0 && (
+                        <div>
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Extracted Image Data</h4>
+                            <div className="overflow-hidden rounded-lg border border-gray-200">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Field</th>
+                                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Extracted Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {Object.entries(metadata.extractedData).map(([key, value]) => (
+                                            <tr key={key} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-700 capitalize">
+                                                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                                                </td>
+                                                <td className="px-4 py-2 text-sm text-gray-600 font-mono break-all">
+                                                    {value === null || value === 'null' ? (
+                                                        <span className="text-gray-400 italic">Not Found</span>
+                                                    ) : typeof value === 'object' ? (
+                                                        JSON.stringify(value)
+                                                    ) : (
+                                                        String(value)
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Prompt Logic Section */}
                     <div>
                         <div className="flex items-center justify-between mb-2">
