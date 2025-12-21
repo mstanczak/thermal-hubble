@@ -49,7 +49,10 @@ export function ValidationIntelligence({ metadata }: { metadata: ValidationMetad
                                         </div>
                                         <div className="flex items-center gap-2 text-xs">
                                             <span className="text-gray-500">{source.sourceType}</span>
-                                            <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-mono">
+                                            <span
+                                                className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-mono cursor-help"
+                                                title="Weight indicates how much authority the AI gives to this source. 100% = Absolute Truth (overrides AI knowledge). 0% = Ignored."
+                                            >
                                                 {source.weight}%
                                             </span>
                                         </div>

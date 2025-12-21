@@ -75,9 +75,18 @@ export async function validateShipmentWithGemini(
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: modelId });
 
-    // Fetch external context from MCP servers
+    // Fetch external context from MCP servers (Resources)
     const mcpManager = MCPClientManager.getInstance();
-    const mcpSources = await mcpManager.fetchContextFromServers();
+    const resourcesPromise = mcpManager.fetchContextFromServers();
+
+    // Fetch external context from MCP servers (Tools)
+    const toolQueries = [];
+    if (data.unNumber) toolQueries.push(data.unNumber);
+    if (data.properShippingName) toolQueries.push(data.properShippingName);
+    const toolsPromise = mcpManager.fetchToolContext(toolQueries);
+
+    const [mcpResources, mcpTools] = await Promise.all([resourcesPromise, toolsPromise]);
+    const mcpSources = [...mcpResources, ...mcpTools];
 
     // Fetch and format local documents
     const localDocs = await StorageManager.getAllDocuments();
@@ -167,9 +176,8 @@ export async function validateShipmentWithGemini(
       const parsedResult = JSON.parse(jsonString) as ValidationResult;
 
       // Attach metadata for transparency
-      // Attach metadata for transparency
       parsedResult.metadata = {
-        promptTemplate: promptTemplate, // Send full prompt, let UI handle truncation
+        promptTemplate: finalPrompt, // Send full prompt with injected context
         sourcesUsed: allSources,
         modelId: modelId
       };
@@ -455,11 +463,60 @@ export async function validateDGScreenShotWithGemini(
     // Convert file to base64
     const base64Data = await fileToGenerativePart(file);
 
+    // STAGE 1: Extract Search Terms
+    // We do a lightweight pass just to get terms to query the MCP server
+    const extractPrompt = `
+      Identify the UN Number and Proper Shipping Name from this image.
+      Return ONLY a JSON object: {"unNumber": "...", "properShippingName": "..."}
+      If not found, return null values.
+    `;
+
+    let searchContext: SourceContext[] = [];
+
+    // Attempt parallel execution of Resources fetch while we wait for extraction
+    const mcpManager = MCPClientManager.getInstance();
+    const resourcePromise = mcpManager.fetchContextFromServers();
+
+    try {
+      const extractResult = await model.generateContent([extractPrompt, base64Data]);
+      const extractText = extractResult.response.text();
+      const jsonMatch = extractText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const extracted = JSON.parse(jsonMatch[0]);
+        const queries = [];
+        if (extracted.unNumber) queries.push(extracted.unNumber);
+        if (extracted.properShippingName) queries.push(extracted.properShippingName);
+
+        if (queries.length > 0) {
+          console.log("Extracted terms for MCP Query:", queries);
+          const toolContext = await mcpManager.fetchToolContext(queries);
+          searchContext = [...toolContext];
+        }
+      }
+    } catch (e) {
+      console.warn("Fast extraction failed, proceeding without specific tool context", e);
+    }
+
+    const resourceContext = await resourcePromise;
+    const allContext = [...resourceContext, ...searchContext]; // Tools + Resources
+
+    // Combine for context string
+    let externalContext = "";
+    if (allContext.length > 0) {
+      externalContext += "\n\n--- EXTERNAL CONTEXT (MCP/Tools) ---\n";
+      for (const source of allContext) {
+        externalContext += `\n[SOURCE: ${source.sourceName} (Type: ${source.sourceType}, Weight: ${source.weight}%)]\n${source.content}\n`;
+      }
+    }
+
     const prompt = `
       You are a hazardous materials compliance expert. Analyze this screenshot of a shipping software's Dangerous Goods tab.
       
+      I have already pre-fetched some external context for you to verify against:
+      ${externalContext}
+      
       1. Extract all visible dangerous goods information (UN Number, Proper Shipping Name, Class, Packing Group, Quantity, etc.).
-      2. Validate the extracted information against standard IATA and DOT regulations.
+      2. Validate the extracted information against standard IATA/DOT regulations AND the provided external context.
       3. Check for common errors such as:
          - Mismatched UN Number and Proper Shipping Name.
          - Incorrect Packing Group for the UN Number.
@@ -519,7 +576,7 @@ export async function validateDGScreenShotWithGemini(
     // Attach metadata for transparency
     resultData.metadata = {
       promptTemplate: prompt,
-      sourcesUsed: [], // DG Validator currently doesn't use external context, but we list it as empty for consistency
+      sourcesUsed: allContext,
       modelId: modelId
     };
 

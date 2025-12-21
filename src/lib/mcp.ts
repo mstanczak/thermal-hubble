@@ -141,4 +141,75 @@ export class MCPClientManager {
 
         return contexts;
     }
+
+    /**
+     * Discovers and calls relevant tools on connected servers.
+     * Simple heuristic: Looks for tools with 'search' in the name.
+     */
+    public async fetchToolContext(searchQueries: string[]): Promise<SourceContext[]> {
+        const configsStr = localStorage.getItem('mcp_servers');
+        if (!configsStr || searchQueries.length === 0) return [];
+
+        const configs: MCPServerConfig[] = JSON.parse(configsStr);
+        const enabledServers = configs.filter(c => c.enabled);
+        if (enabledServers.length === 0) return [];
+
+        const contexts: SourceContext[] = [];
+
+        await Promise.all(enabledServers.map(async (server) => {
+            try {
+                const client = await this.connectToServer(server.url);
+                const { tools } = await client.listTools();
+
+                for (const tool of tools) {
+                    // Heuristic: Only use tools that look like search/lookup tools
+                    if (tool.name.includes('search') || tool.name.includes('lookup') || tool.name.includes('find') || tool.name.includes('get')) {
+                        // Check if it takes a query string
+                        const inputSchema = tool.inputSchema as any;
+                        const props = inputSchema?.properties || {};
+
+                        // Heuristic: Find a string property to inject our query into
+                        const queryProp = Object.keys(props).find(key =>
+                            props[key].type === 'string' &&
+                            (key.includes('query') || key.includes('search') || key.includes('term') || key.includes('id') || key.includes('number') || key.includes('text'))
+                        );
+
+                        if (queryProp) {
+                            for (const query of searchQueries) {
+                                if (!query) continue;
+                                try {
+                                    console.log(`[MCP] Calling tool ${tool.name} on ${server.name} with ${query}...`);
+                                    const result = await client.callTool({
+                                        name: tool.name,
+                                        arguments: { [queryProp]: query }
+                                    });
+
+                                    // Format result
+                                    if (result.content) {
+                                        for (const content of result.content) {
+                                            if (content.type === 'text') {
+                                                contexts.push({
+                                                    sourceName: `${server.name} (Tool: ${tool.name})`,
+                                                    sourceType: 'MCP',
+                                                    content: `Query: "${query}"\nResult: ${content.text}`,
+                                                    weight: server.weight * 1.5, // Boost weight for specific tool results
+                                                    uri: `tool://${server.name}/${tool.name}`
+                                                });
+                                            }
+                                        }
+                                    }
+                                } catch (callErr) {
+                                    console.warn(`[MCP] Tool call failed for ${tool.name}:`, callErr);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn(`[MCP] Tool discovery failed for ${server.name}:`, err);
+            }
+        }));
+
+        return contexts;
+    }
 }
