@@ -186,7 +186,7 @@ export class MCPClientManager {
 
                                     // Format result
                                     if (result.content) {
-                                        for (const content of result.content) {
+                                        for (const content of (result.content as any)) {
                                             if (content.type === 'text') {
                                                 contexts.push({
                                                     sourceName: `${server.name} (Tool: ${tool.name})`,
