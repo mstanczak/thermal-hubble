@@ -82,7 +82,13 @@ export async function validateShipmentWithGemini(
 
     // Fetch external context from MCP servers (Tools)
     const toolQueries = [];
-    if (data.unNumber) toolQueries.push(data.unNumber);
+    if (data.unNumber) {
+      let val = data.unNumber.trim();
+      if (!val.toUpperCase().startsWith('UN') && /^\d{4}$/.test(val)) {
+        val = `UN${val}`;
+      }
+      toolQueries.push(val);
+    }
     if (data.properShippingName) toolQueries.push(data.properShippingName);
     const toolsPromise = mcpManager.fetchToolContext(toolQueries);
 
@@ -143,6 +149,8 @@ export async function validateShipmentWithGemini(
       4. Service eligibility issues (e.g., ADG on non-premium service)
       5. Marking and labeling requirements
       6. Documentation gaps
+      
+      When identifying a compliance issue or providing a recommendation based on information found in the EXTERNAL CONTEXT, you MUST explicitly cite the 'sourceName' in the 'explanation' field of your JSON response (e.g., 'Per regulation found in [Source Name]...').
 
       For each issue found, provide a JSON object with the following structure. 
       Return ONLY a valid JSON object with a "status" field (Pass/Fail/Warnings) and an "issues" array.
@@ -362,7 +370,14 @@ async function extractDataFromText(text: string, apiKey: string, modelId: string
   const jsonString = jsonMatch ? jsonMatch[0] : responseText.replace(/```json\n|\n```/g, "").trim();
 
   try {
-    return JSON.parse(jsonString);
+    const data = JSON.parse(jsonString);
+    // Enforce UN prefix
+    if (data.unNumber) {
+      const val = String(data.unNumber).trim();
+      // Remove existing prefix case-insensitively and re-add UN
+      data.unNumber = val.toUpperCase().startsWith('UN') ? val : `UN${val}`;
+    }
+    return data;
   } catch (e: any) {
     console.error("JSON Parse Error", e);
     console.error("Raw Text", responseText);
@@ -485,7 +500,14 @@ export async function validateDGScreenShotWithGemini(
       if (jsonMatch) {
         const extracted = JSON.parse(jsonMatch[0]);
         const queries = [];
-        if (extracted.unNumber) queries.push(extracted.unNumber);
+        if (extracted.unNumber) {
+          let val = extracted.unNumber.trim();
+          // Heuristic: If it's a 4 digit number, prefix UN
+          if (!val.toUpperCase().startsWith('UN') && /^\d{4}$/.test(val)) {
+            val = `UN${val}`;
+          }
+          queries.push(val);
+        }
         if (extracted.properShippingName) queries.push(extracted.properShippingName);
 
         if (queries.length > 0) {
@@ -528,6 +550,8 @@ export async function validateDGScreenShotWithGemini(
       ${localStorage.getItem('rule_emergency_contact') !== 'false' ? '- CRITICAL: Verify that a validated 24-hour emergency response telephone number is clearly present. If missing, mark as Fail.' : ''}
       ${localStorage.getItem('rule_physical_labels') !== 'false' ? '- CRITICAL: Check for visual confirmation of required physical labels on the package (Orientation arrows, Cargo Aircraft Only stickers, Class Hazard Diamonds) if the image shows a physical box. If labels are missing or incorrect, mark as Fail.' : ''}
       
+      When identifying a compliance issue or providing a recommendation based on information found in the EXTERNAL CONTEXT, you MUST explicitly cite the 'sourceName' in the 'explanation' field of your JSON response (e.g., 'Per regulation found in [Source Name]...').
+
       Return a JSON object with the following structure:
       {
         "extractedData": {
@@ -562,6 +586,12 @@ export async function validateDGScreenShotWithGemini(
 
     const jsonString = text.replace(/```json\n|\n```/g, "").trim();
     const resultData = JSON.parse(jsonString) as ValidationResult;
+
+    // Enforce UN prefix in extracted data
+    if ((resultData as any).extractedData?.unNumber) {
+      const val = String((resultData as any).extractedData.unNumber).trim();
+      (resultData as any).extractedData.unNumber = val.toUpperCase().startsWith('UN') ? val : `UN${val}`;
+    }
 
     // Add usage metadata if available
     const usageMetadata = response.usageMetadata;

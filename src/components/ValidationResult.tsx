@@ -7,6 +7,49 @@ interface ValidationResultProps {
     result: ValidationResult;
 }
 
+import type { SourceContext } from '../lib/mcp';
+
+function SourceItem({ source }: { source: SourceContext }) {
+    const [showContent, setShowContent] = useState(false);
+
+    return (
+        <div className="border border-gray-100 rounded-md bg-gray-50 overflow-hidden">
+            <div className="flex items-center justify-between p-2">
+                <div className="flex items-center gap-2 overflow-hidden">
+                    {source.sourceType === 'MCP' ? (
+                        <Database className="w-3.5 h-3.5 text-purple-500" />
+                    ) : (
+                        <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                    )}
+                    <span className="truncate font-medium text-gray-700" title={source.sourceName}>{source.sourceName}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                    <span className="text-gray-500">{source.sourceType}</span>
+                    <span
+                        className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-mono cursor-help"
+                        title="AI Authority Weight indicates how much authority the AI gives to this source. 100% = Absolute Truth (overrides AI knowledge). 0% = Ignored."
+                    >
+                        {source.weight}%
+                    </span>
+                    <button
+                        onClick={() => setShowContent(!showContent)}
+                        className="ml-2 text-blue-600 hover:text-blue-800 text-[10px] font-medium"
+                    >
+                        {showContent ? "Hide Data" : "View Data"}
+                    </button>
+                </div>
+            </div>
+            {showContent && (
+                <div className="p-2 bg-gray-100 border-t border-gray-200">
+                    <pre className="text-[10px] font-mono text-gray-600 whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
+                        {source.content}
+                    </pre>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function ValidationIntelligence({ metadata }: { metadata: ValidationMetadata }) {
     const [expanded, setExpanded] = useState(false);
     const [showFullPrompt, setShowFullPrompt] = useState(false);
@@ -38,25 +81,7 @@ export function ValidationIntelligence({ metadata }: { metadata: ValidationMetad
                                 <p className="text-sm text-gray-500 italic">No external context or local documents were used for this analysis. (Pure model knowledge)</p>
                             ) : (
                                 metadata.sourcesUsed.map((source, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-100 rounded text-sm">
-                                        <div className="flex items-center gap-2 overflow-hidden">
-                                            {source.sourceType === 'MCP' ? (
-                                                <Database className="w-3.5 h-3.5 text-purple-500" />
-                                            ) : (
-                                                <FileText className="w-3.5 h-3.5 text-indigo-500" />
-                                            )}
-                                            <span className="truncate font-medium text-gray-700" title={source.sourceName}>{source.sourceName}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <span className="text-gray-500">{source.sourceType}</span>
-                                            <span
-                                                className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-mono cursor-help"
-                                                title="Weight indicates how much authority the AI gives to this source. 100% = Absolute Truth (overrides AI knowledge). 0% = Ignored."
-                                            >
-                                                {source.weight}%
-                                            </span>
-                                        </div>
-                                    </div>
+                                    <SourceItem key={idx} source={source} />
                                 ))
                             )}
                         </div>
