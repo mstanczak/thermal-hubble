@@ -24,11 +24,19 @@ export function Layout({ children, onSettingsClick, onDocumentationClick, onSupp
                         </h1>
                     </button>
                     <nav className="flex items-center gap-4">
-                        <button onClick={onComplianceClick} className="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                            <span role="img" aria-label="shield">🛡️</span> Compliance & Safety
-                        </button>
                         <button onClick={onDocumentationClick} className="text-sm font-medium text-gray-600 hover:text-gray-900">Documentation</button>
                         <button onClick={onSupportClick} className="text-sm font-medium text-gray-600 hover:text-gray-900">Support</button>
+
+                        <div className="w-px h-6 bg-gray-200 mx-1"></div>
+
+                        <button
+                            onClick={onComplianceClick}
+                            className="text-gray-600 hover:text-gray-900 p-1 rounded-md hover:bg-gray-100 transition-colors"
+                            title="Compliance & Safety"
+                        >
+                            <span role="img" aria-label="shield" className="text-lg">🛡️</span>
+                        </button>
+
                         {onSettingsClick && (
                             <button
                                 onClick={onSettingsClick}

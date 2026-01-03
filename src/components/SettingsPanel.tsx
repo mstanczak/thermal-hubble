@@ -699,7 +699,7 @@ export function SettingsPanel() {
                         }
                     }}
                     className="text-xs text-gray-300 hover:text-red-400 transition-colors"
-                    title="Factory Reset"
+                    title="Clear all saved data (keys, models, settings) and reload the application. Use this if the app becomes unresponsive."
                 >
                     Reset Application
                 </button>
