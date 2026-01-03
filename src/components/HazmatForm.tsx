@@ -11,7 +11,11 @@ import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { SDSUpload } from './SDSUpload';
 import { ApiKeyModal } from './ApiKeyModal';
-export function HazmatForm() {
+interface HazmatFormProps {
+    isSubmitDisabled?: boolean;
+}
+
+export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
     const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [apiError, setApiError] = useState<string | null>(null);
@@ -22,6 +26,7 @@ export function HazmatForm() {
     const [activeSuggestionField, setActiveSuggestionField] = useState<string | null>(null);
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [isSuggesting, setIsSuggesting] = useState(false);
+
 
     const {
         register,
@@ -647,10 +652,11 @@ export function HazmatForm() {
 
                 <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || isSubmitDisabled}
+                    title={isSubmitDisabled ? "Please accept the compliance banner at the top of the page to continue." : undefined}
                     className={clsx(
                         "w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2",
-                        isLoading
+                        (isLoading || isSubmitDisabled)
                             ? "bg-gray-400 cursor-not-allowed"
                             : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
                     )}

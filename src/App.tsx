@@ -4,6 +4,7 @@ import { HazmatForm } from './components/HazmatForm';
 import { DGValidator } from './components/DGValidator';
 import { Documentation } from './components/Documentation';
 import { Support } from './components/Support';
+import { ComplianceBanner } from './components/ComplianceBanner';
 import { useState, useEffect } from 'react';
 import { Settings, ArrowLeft, AlertTriangle, X, Scan } from 'lucide-react';
 import clsx from 'clsx';
@@ -11,8 +12,16 @@ import clsx from 'clsx';
 function App() {
   const [currentPage, setCurrentPage] = useState<'form' | 'settings' | 'validator' | 'documentation' | 'support'>('form');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [isComplianceVerified, setIsComplianceVerified] = useState(false);
 
   useEffect(() => {
+    // Check local storage for compliance banner
+    const complianceAcknowledged = localStorage.getItem('thermal_hubble_compliance_acknowledged');
+    if (complianceAcknowledged) {
+      setIsComplianceVerified(true);
+    }
+
+    // Existing disclaimer check (keeping this as it serves a different, specific context about hallucinations)
     const acknowledged = localStorage.getItem('ai_disclaimer_acknowledged');
     if (!acknowledged) {
       setShowDisclaimer(true);
@@ -22,6 +31,10 @@ function App() {
   const handleDismissDisclaimer = () => {
     localStorage.setItem('ai_disclaimer_acknowledged', 'true');
     setShowDisclaimer(false);
+  };
+
+  const handleComplianceAccept = () => {
+    setIsComplianceVerified(true);
   };
 
   const renderContent = () => {
@@ -123,7 +136,11 @@ function App() {
               </button>
             </div>
 
-            {currentPage === 'form' ? <HazmatForm /> : <DGValidator />}
+            {currentPage === 'form' ? (
+              <HazmatForm isSubmitDisabled={!isComplianceVerified} />
+            ) : (
+              <DGValidator />
+            )}
           </>
         );
     }
@@ -136,6 +153,7 @@ function App() {
       onSupportClick={() => setCurrentPage('support')}
       onLogoClick={() => setCurrentPage('form')}
     >
+      <ComplianceBanner onAccept={handleComplianceAccept} />
       <div className="max-w-4xl mx-auto">
         {renderContent()}
       </div>
