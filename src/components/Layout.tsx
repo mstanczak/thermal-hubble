@@ -7,9 +7,10 @@ interface LayoutProps {
     onDocumentationClick?: () => void;
     onSupportClick?: () => void;
     onLogoClick?: () => void;
+    onComplianceClick?: () => void;
 }
 
-export function Layout({ children, onSettingsClick, onDocumentationClick, onSupportClick, onLogoClick }: LayoutProps) {
+export function Layout({ children, onSettingsClick, onDocumentationClick, onSupportClick, onLogoClick, onComplianceClick }: LayoutProps) {
     return (
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -23,6 +24,9 @@ export function Layout({ children, onSettingsClick, onDocumentationClick, onSupp
                         </h1>
                     </button>
                     <nav className="flex items-center gap-4">
+                        <button onClick={onComplianceClick} className="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                            <span role="img" aria-label="shield">🛡️</span> Compliance & Safety
+                        </button>
                         <button onClick={onDocumentationClick} className="text-sm font-medium text-gray-600 hover:text-gray-900">Documentation</button>
                         <button onClick={onSupportClick} className="text-sm font-medium text-gray-600 hover:text-gray-900">Support</button>
                         {onSettingsClick && (

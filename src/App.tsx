@@ -170,6 +170,7 @@ function App() {
       onDocumentationClick={() => setCurrentPage('documentation')}
       onSupportClick={() => setCurrentPage('support')}
       onLogoClick={() => setCurrentPage('form')}
+      onComplianceClick={handleLearnMore}
     >
       {/* Show banner only if not verified AND not currently looking at the info page */}
       {(!isComplianceVerified && currentPage !== 'compliance-info') && (
