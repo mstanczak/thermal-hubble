@@ -689,6 +689,21 @@ export function SettingsPanel() {
                     </div>
                 )
             }
+
+            <div className="mt-8 pt-4 border-t border-gray-100 flex justify-center">
+                <button
+                    onClick={() => {
+                        if (confirm('Are you sure you want to reset the application? This will clear all data and settings.')) {
+                            localStorage.clear();
+                            window.location.reload();
+                        }
+                    }}
+                    className="text-xs text-gray-300 hover:text-red-400 transition-colors"
+                    title="Factory Reset"
+                >
+                    Reset Application
+                </button>
+            </div>
         </div >
     );
 }
