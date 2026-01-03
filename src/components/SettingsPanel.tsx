@@ -270,6 +270,7 @@ export function SettingsPanel() {
                     <div className="flex gap-2">
                         <div className="relative flex-1">
                             <input
+                                id="onboarding-api-key-input"
                                 type={showKey ? "text" : "password"}
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}

@@ -5,6 +5,7 @@ import { DGValidator } from './components/DGValidator';
 import { Documentation } from './components/Documentation';
 import { Support } from './components/Support';
 import { ComplianceBanner } from './components/ComplianceBanner';
+import { OnboardingGuide } from './components/OnboardingGuide';
 import { ComplianceInfo } from './components/ComplianceInfo';
 import { useState, useEffect } from 'react';
 import { Settings, ArrowLeft, Scan } from 'lucide-react';
@@ -137,6 +138,12 @@ function App() {
       onLogoClick={() => setCurrentPage('form')}
       onComplianceClick={handleLearnMore}
     >
+      <OnboardingGuide
+        currentPage={currentPage}
+        onNavigate={(page) => setCurrentPage(page)}
+        isComplianceVerified={isComplianceVerified}
+      />
+
       {/* Show banner only if not verified AND not currently looking at the info page */}
       {(!isComplianceVerified && currentPage !== 'compliance-info') && (
         <ComplianceBanner

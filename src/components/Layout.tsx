@@ -37,8 +37,21 @@ export function Layout({ children, onSettingsClick, onDocumentationClick, onSupp
                             <span role="img" aria-label="shield" className="text-lg">🛡️</span>
                         </button>
 
+                        {/* Help / Restart Onboarding */}
+                        <button
+                            onClick={() => {
+                                localStorage.setItem('onboarding_completed', 'reset');
+                                window.location.reload(); // Simple way to re-trigger the check on mount
+                            }}
+                            className="text-gray-600 hover:text-gray-900 p-1 rounded-md hover:bg-gray-100 transition-colors"
+                            title="Restart Onboarding Guide"
+                        >
+                            <span role="img" aria-label="bulb" className="text-lg">💡</span>
+                        </button>
+
                         {onSettingsClick && (
                             <button
+                                id="onboarding-settings-btn"
                                 onClick={onSettingsClick}
                                 className="text-gray-600 hover:text-gray-900 p-1 rounded-md hover:bg-gray-100 transition-colors"
                                 title="Settings"
