@@ -5,14 +5,16 @@ import { DGValidator } from './components/DGValidator';
 import { Documentation } from './components/Documentation';
 import { Support } from './components/Support';
 import { ComplianceBanner } from './components/ComplianceBanner';
+import { ComplianceInfo } from './components/ComplianceInfo';
 import { useState, useEffect } from 'react';
 import { Settings, ArrowLeft, AlertTriangle, X, Scan } from 'lucide-react';
 import clsx from 'clsx';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'form' | 'settings' | 'validator' | 'documentation' | 'support'>('form');
+  const [currentPage, setCurrentPage] = useState<'form' | 'settings' | 'validator' | 'documentation' | 'support' | 'compliance-info'>('form');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [isComplianceVerified, setIsComplianceVerified] = useState(false);
+  const [previousPage, setPreviousPage] = useState<'form' | 'validator'>('form');
 
   useEffect(() => {
     // Check local storage for compliance banner
@@ -37,8 +39,24 @@ function App() {
     setIsComplianceVerified(true);
   };
 
+  const handleLearnMore = () => {
+    if (currentPage !== 'compliance-info') {
+      // Save where we came from if it's one of the main tools
+      if (currentPage === 'form' || currentPage === 'validator') {
+        setPreviousPage(currentPage);
+      }
+      setCurrentPage('compliance-info');
+    }
+  };
+
+  const handleBackFromInfo = () => {
+    setCurrentPage(previousPage);
+  };
+
   const renderContent = () => {
     switch (currentPage) {
+      case 'compliance-info':
+        return <ComplianceInfo onBack={handleBackFromInfo} />;
       case 'settings':
         return (
           <>
@@ -153,7 +171,13 @@ function App() {
       onSupportClick={() => setCurrentPage('support')}
       onLogoClick={() => setCurrentPage('form')}
     >
-      <ComplianceBanner onAccept={handleComplianceAccept} />
+      {/* Show banner only if not verified AND not currently looking at the info page */}
+      {(!isComplianceVerified && currentPage !== 'compliance-info') && (
+        <ComplianceBanner
+          onAccept={handleComplianceAccept}
+          onLearnMore={handleLearnMore}
+        />
+      )}
       <div className="max-w-4xl mx-auto">
         {renderContent()}
       </div>

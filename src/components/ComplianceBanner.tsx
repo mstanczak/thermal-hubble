@@ -1,12 +1,14 @@
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Bot, Scale, X, Check } from 'lucide-react';
 
 interface ComplianceBannerProps {
     onAccept: () => void;
+    onLearnMore: () => void;
 }
 
-export function ComplianceBanner({ onAccept }: ComplianceBannerProps) {
+export function ComplianceBanner({ onAccept, onLearnMore }: ComplianceBannerProps) {
     const [isVisible, setIsVisible] = useState(true);
 
     // Constants
@@ -57,35 +59,49 @@ export function ComplianceBanner({ onAccept }: ComplianceBannerProps) {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
 
                                 {/* Privacy */}
-                                <div className="flex items-start gap-3">
-                                    <div className="p-2 bg-blue-100/80 rounded-lg text-blue-600 shrink-0">
+                                <div className="flex items-start gap-3 group cursor-pointer" onClick={onLearnMore}>
+                                    <div className="p-2 bg-blue-100/80 rounded-lg text-blue-600 shrink-0 group-hover:bg-blue-200 transition-colors">
                                         <ShieldCheck className="w-5 h-5" />
                                     </div>
-                                    <p className="text-sm text-gray-700 font-medium leading-tight">
-                                        {STORAGE_MSG}
-                                    </p>
+                                    <div>
+                                        <p className="text-sm text-gray-700 font-medium leading-tight">
+                                            {STORAGE_MSG}
+                                        </p>
+                                        <button className="text-xs text-blue-600 font-semibold mt-1 hover:underline">
+                                            Learn more
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* AI Terms */}
-                                <div className="flex items-start gap-3">
-                                    <div className="p-2 bg-purple-100/80 rounded-lg text-purple-600 shrink-0">
+                                <div className="flex items-start gap-3 group cursor-pointer" onClick={onLearnMore}>
+                                    <div className="p-2 bg-purple-100/80 rounded-lg text-purple-600 shrink-0 group-hover:bg-purple-200 transition-colors">
                                         <Bot className="w-5 h-5" />
                                     </div>
-                                    <p className="text-sm text-gray-700 font-medium leading-tight">
-                                        {AI_TERMS_MSG}
-                                    </p>
+                                    <div>
+                                        <p className="text-sm text-gray-700 font-medium leading-tight">
+                                            {AI_TERMS_MSG}
+                                        </p>
+                                        <button className="text-xs text-purple-600 font-semibold mt-1 hover:underline">
+                                            Learn more
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Estimates */}
-                                <div className="flex items-start gap-3">
-                                    <div className="p-2 bg-amber-100/80 rounded-lg text-amber-600 shrink-0">
+                                <div className="flex items-start gap-3 group cursor-pointer" onClick={onLearnMore}>
+                                    <div className="p-2 bg-amber-100/80 rounded-lg text-amber-600 shrink-0 group-hover:bg-amber-200 transition-colors">
                                         <Scale className="w-5 h-5" />
                                     </div>
-                                    <p className="text-sm text-gray-700 font-medium leading-tight">
-                                        {ESTIMATES_MSG}
-                                    </p>
+                                    <div>
+                                        <p className="text-sm text-gray-700 font-medium leading-tight">
+                                            {ESTIMATES_MSG}
+                                        </p>
+                                        <button className="text-xs text-amber-600 font-semibold mt-1 hover:underline">
+                                            Learn more
+                                        </button>
+                                    </div>
                                 </div>
-
                             </div>
 
                             {/* Actions */}
