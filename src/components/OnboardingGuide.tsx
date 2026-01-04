@@ -111,19 +111,19 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
 
                     {/* Simple Popover Bubble */}
                     <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        initial={{ opacity: 0, y: 10, scale: 0.95, x: "-50%" }}
+                        animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
                         transition={{ delay: 0.2, type: 'spring' }}
                         style={{
                             position: 'absolute',
                             top: settingsRect.bottom + 16,
-                            right: window.innerWidth - settingsRect.right, // Align right edges
+                            left: settingsRect.left + (settingsRect.width / 2),
                         }}
-                        className="pointer-events-auto bg-blue-600 text-white p-5 rounded-xl shadow-xl max-w-xs w-72 relative origin-top-right"
+                        className="pointer-events-auto bg-blue-600 text-white p-5 rounded-xl shadow-xl max-w-xs w-72 relative origin-top"
                     >
                         {/* CSS Arrow pointing UP at the settings gear */}
                         <div
-                            className="absolute -top-2 right-3 w-4 h-4 bg-blue-600 rotate-45"
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-blue-600 rotate-45"
                             style={{ borderRadius: '2px' }}
                         />
 
