@@ -2,6 +2,7 @@ import type { ValidationResult, ValidationIssue, ValidationMetadata } from '../l
 import { CheckCircle, AlertTriangle, Info, XCircle, ChevronDown, ChevronUp, Database, FileText, BrainCircuit } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
+import { Tooltip } from './ui/Tooltip';
 
 interface ValidationResultProps {
     result: ValidationResult;
@@ -25,12 +26,11 @@ function SourceItem({ source }: { source: SourceContext }) {
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                     <span className="text-gray-500">{source.sourceType}</span>
-                    <span
-                        className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-mono cursor-help"
-                        title="AI Authority Weight indicates how much authority the AI gives to this source. 100% = Absolute Truth (overrides AI knowledge). 0% = Ignored."
-                    >
-                        {source.weight}%
-                    </span>
+                    <Tooltip content="AI Authority Weight indicates how much authority the AI gives to this source. 100% = Absolute Truth (overrides AI knowledge). 0% = Ignored.">
+                        <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-mono cursor-help">
+                            {source.weight}%
+                        </span>
+                    </Tooltip>
                     <button
                         onClick={() => setShowContent(!showContent)}
                         className="ml-2 text-blue-600 hover:text-blue-800 text-[10px] font-medium"

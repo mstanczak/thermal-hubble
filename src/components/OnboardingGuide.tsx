@@ -13,56 +13,56 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
     const [isVisible, setIsVisible] = useState(false);
     const [settingsRect, setSettingsRect] = useState<DOMRect | null>(null);
     const [inputRect, setInputRect] = useState<DOMRect | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
 
     // Initial Check
     useEffect(() => {
         const apiKey = localStorage.getItem('gemini_api_key');
         const onboardingCompleted = localStorage.getItem('onboarding_completed');
 
-        // Trigger condition: Compliance verified AND no API key AND not previously completed/skipped
+        // Check mobile
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        // Trigger condition
         if (isComplianceVerified && !apiKey && !onboardingCompleted) {
             setIsVisible(true);
             setStep(1);
         } else if (onboardingCompleted === 'reset') {
-            // Manual restart trigger
             setIsVisible(true);
             setStep(1);
-            localStorage.removeItem('onboarding_completed'); // Clear the flag so it behaves normally
+            localStorage.removeItem('onboarding_completed');
         }
+
+        return () => window.removeEventListener('resize', checkMobile);
     }, [isComplianceVerified]);
 
-    // Track Step 1 Element (Settings Button)
+    // Track Step 1 Element (Desktop)
     useEffect(() => {
-        if (step === 1) {
+        if (!isMobile && step === 1) {
             const updateRect = () => {
                 const el = document.getElementById('onboarding-settings-btn');
-                if (el) {
-                    setSettingsRect(el.getBoundingClientRect());
-                }
+                if (el) setSettingsRect(el.getBoundingClientRect());
             };
-
-            // Wait for layout
             setTimeout(updateRect, 500);
             window.addEventListener('resize', updateRect);
             return () => window.removeEventListener('resize', updateRect);
         }
-    }, [step, isVisible]);
+    }, [step, isVisible, isMobile]);
 
-    // Track Step 2 Element (Input)
+    // Track Step 2 Element (Desktop)
     useEffect(() => {
-        if (step === 2 && currentPage === 'settings') {
+        if (!isMobile && step === 2 && currentPage === 'settings') {
             const updateRect = () => {
                 const el = document.getElementById('onboarding-api-key-input');
-                if (el) {
-                    setInputRect(el.getBoundingClientRect());
-                }
+                if (el) setInputRect(el.getBoundingClientRect());
             };
-
             setTimeout(updateRect, 500);
             window.addEventListener('resize', updateRect);
             return () => window.removeEventListener('resize', updateRect);
         }
-    }, [step, currentPage]);
+    }, [step, currentPage, isMobile]);
 
     // Auto-advance logic
     useEffect(() => {
@@ -83,9 +83,77 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
 
     if (!isVisible) return null;
 
+    // --- Mobile View ---
+    if (isMobile) {
+        return (
+            <AnimatePresence>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
+                    >
+                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white text-center">
+                            <h3 className="text-xl font-bold mb-1">
+                                {step === 1 ? "Welcome! 🚀" : "Power Up 🔑"}
+                            </h3>
+                            <p className="text-blue-100 text-sm">
+                                {step === 1 ? "Step 1 of 2: Navigation" : "Step 2 of 2: Activation"}
+                            </p>
+                        </div>
+                        <div className="p-6">
+                            {step === 1 ? (
+                                <>
+                                    <p className="text-gray-600 mb-6 text-center leading-relaxed">
+                                        Let's get you set up. First, tap the <strong>Settings</strong> icon (or the ⚙️ gear) in the top menu to configure your AI assistant.
+                                    </p>
+                                    <button
+                                        onClick={() => onNavigate('settings')}
+                                        className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow-lg hover:bg-blue-700 transition"
+                                    >
+                                        Go to Settings
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-gray-600 mb-4 text-center leading-relaxed">
+                                        You need a <strong>Google Gemini API Key</strong>. It's free and private!
+                                    </p>
+                                    <ol className="space-y-3 text-sm text-gray-600 list-decimal list-inside mb-6 bg-gray-50 p-4 rounded-lg">
+                                        <li>Tap the link below to get a key.</li>
+                                        <li>Copy your new key.</li>
+                                        <li>Paste it into the API Key field!</li>
+                                    </ol>
+                                    <a
+                                        href="https://aistudio.google.com/app/apikey"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block w-full py-3 text-center border-2 border-blue-600 text-blue-600 rounded-lg font-bold mb-3 hover:bg-blue-50 transition"
+                                    >
+                                        Get API Key <ExternalLink className="inline w-4 h-4 ml-1" />
+                                    </a>
+                                    <button
+                                        onClick={handleComplete}
+                                        className="w-full py-3 bg-gray-900 text-white rounded-lg font-bold hover:bg-black transition"
+                                    >
+                                        I've Pasted It!
+                                    </button>
+                                </>
+                            )}
+                            <button onClick={handleSkip} className="w-full py-4 text-gray-400 text-sm hover:text-gray-600">
+                                Skip Tutorial
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            </AnimatePresence>
+        );
+    }
+
+    // --- Desktop View (Existing Spotlight Logic) ---
     return (
         <AnimatePresence>
-            {/* Step 1: Overlay for Settings Button */}
             {/* Step 1: Overlay for Settings Button */}
             {step === 1 && settingsRect && (
                 <motion.div
@@ -94,7 +162,7 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 pointer-events-none"
                 >
-                    {/* Pulsing Beacon on the actual button */}
+                    {/* Pulsing Beacon */}
                     <div
                         style={{
                             position: 'absolute',
@@ -121,7 +189,6 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
                         }}
                         className="pointer-events-auto bg-blue-600 text-white p-5 rounded-xl shadow-xl max-w-xs w-72 relative origin-top"
                     >
-                        {/* CSS Arrow pointing UP at the settings gear */}
                         <div
                             className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-blue-600 rotate-45"
                             style={{ borderRadius: '2px' }}

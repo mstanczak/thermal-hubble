@@ -1,5 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { AnimatePresence, motion } from 'framer-motion';
 import { hazmatFormSchema, type HazmatFormData } from '../lib/validation';
 import { CARRIERS, MODES, SERVICE_TYPES, COMMON_UN_NUMBERS } from '../data/regulations';
 import { HAZARD_CLASSES } from '../data/hazardClasses';
@@ -287,15 +288,33 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
         );
     };
 
-    const Tooltip = ({ text }: { text: string }) => (
-        <div className="group relative inline-block ml-1">
-            <Info className="w-3.5 h-3.5 text-gray-400 cursor-help inline" />
-            <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-1 text-xs text-white bg-gray-900 rounded-lg shadow-lg -left-2 top-full">
-                {text}
-                <div className="absolute w-2 h-2 bg-gray-900 transform rotate-45 -top-1 left-3"></div>
+    const Tooltip = ({ text }: { text: string }) => {
+        const [show, setShow] = useState(false);
+        return (
+            <div
+                className="relative inline-block ml-1"
+                onMouseEnter={() => window.innerWidth >= 768 && setShow(true)}
+                onMouseLeave={() => window.innerWidth >= 768 && setShow(false)}
+                onClick={() => setShow(!show)}
+            >
+                <Info className="w-3.5 h-3.5 text-gray-400 cursor-help inline" />
+                <AnimatePresence>
+                    {show && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 5 }}
+                            className="absolute z-50 w-64 p-3 mt-2 text-xs text-white bg-gray-900 rounded-lg shadow-xl -left-2 top-full leading-relaxed"
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        >
+                            {text}
+                            <div className="absolute w-2 h-2 bg-gray-900 transform rotate-45 -top-1 left-3"></div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="space-y-8">

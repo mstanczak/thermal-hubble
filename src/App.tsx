@@ -49,10 +49,10 @@ function App() {
       case 'settings':
         return (
           <>
-            <div className="mb-8 flex items-center gap-4">
+            <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <button
                 onClick={() => setCurrentPage('form')}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 w-full sm:w-auto justify-center"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Form
@@ -76,25 +76,23 @@ function App() {
       default:
         return (
           <>
-            <div className="mb-8 flex items-center justify-between">
+            <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">New Shipment Validation</h2>
                 <p className="text-gray-600">
                   Enter shipment details below to validate against carrier regulations and compliance rules.
                 </p>
-
-                {/* Disclaimer removed as per user request */}
               </div>
               <button
                 onClick={() => setCurrentPage('settings')}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 w-full sm:w-auto justify-center"
               >
                 <Settings className="w-4 h-4" />
                 Settings
               </button>
             </div>
 
-            <div className="flex gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <button
                 onClick={() => setCurrentPage('form')}
                 className={clsx(
