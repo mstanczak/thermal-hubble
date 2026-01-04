@@ -653,6 +653,7 @@ export function SettingsPanel() {
 
                 <div className="flex gap-2 pt-2">
                     <button
+                        id="onboarding-save-btn"
                         onClick={handleSave}
                         className={clsx(
                             "px-4 py-2 font-medium rounded-lg transition-all flex items-center gap-2",
