@@ -137,7 +137,7 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
                             fill="none"
                         >
                             <motion.path
-                                d="M20,80 C20,80 50,20 90,20"
+                                d="M30,85 C30,85 70,85 90,50"
                                 stroke="currentColor"
                                 strokeWidth="4"
                                 strokeLinecap="round"
@@ -146,7 +146,7 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
                                 transition={{ duration: 1, ease: "easeInOut" }}
                             />
                             <motion.path
-                                d="M75,10 L90,20 L80,35"
+                                d="M82,38 L 90,50 L 78,58"
                                 stroke="currentColor"
                                 strokeWidth="4"
                                 strokeLinecap="round"
