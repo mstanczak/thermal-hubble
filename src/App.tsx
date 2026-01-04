@@ -6,6 +6,7 @@ import { Documentation } from './components/Documentation';
 import { Support } from './components/Support';
 import { ComplianceBanner } from './components/ComplianceBanner';
 import { OnboardingGuide } from './components/OnboardingGuide';
+import { EnhancedOnboarding } from './components/EnhancedOnboarding';
 import { ComplianceInfo } from './components/ComplianceInfo';
 import { useState, useEffect } from 'react';
 import { Settings, ArrowLeft, Scan } from 'lucide-react';
@@ -136,7 +137,7 @@ function App() {
       onLogoClick={() => setCurrentPage('form')}
       onComplianceClick={handleLearnMore}
     >
-      <OnboardingGuide
+      <EnhancedOnboarding
         currentPage={currentPage}
         onNavigate={(page) => setCurrentPage(page as any)}
         isComplianceVerified={isComplianceVerified}

@@ -294,6 +294,7 @@ export function SettingsPanel() {
                             value={suggestionModel}
                             onChange={(e) => setSuggestionModel(e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            id="onboarding-model-select"
                         >
                             {MODELS.map(model => (
                                 <option key={model.id} value={model.id}>
@@ -399,7 +400,7 @@ export function SettingsPanel() {
                         </div>
                     </div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6" id="onboarding-mcp-section">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <Server className="w-5 h-5 text-purple-600" />
                         External Resources (MCP)
@@ -606,6 +607,7 @@ export function SettingsPanel() {
                                 onChange={(e) => setSignatoryName(e.target.value)}
                                 placeholder="e.g. John Smith"
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                id="onboarding-signatory-input"
                             />
                         </div>
                         <div>
