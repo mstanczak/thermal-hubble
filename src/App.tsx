@@ -5,7 +5,6 @@ import { DGValidator } from './components/DGValidator';
 import { Documentation } from './components/Documentation';
 import { Support } from './components/Support';
 import { ComplianceBanner } from './components/ComplianceBanner';
-import { OnboardingGuide } from './components/OnboardingGuide';
 import { EnhancedOnboarding } from './components/EnhancedOnboarding';
 import { ComplianceInfo } from './components/ComplianceInfo';
 import { useState, useEffect } from 'react';
