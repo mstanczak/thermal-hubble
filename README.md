@@ -24,6 +24,11 @@
 - **Offline-First:** Heavy documents are stored locally in **IndexedDB** for instant access without re-uploading.
 - **Privacy Focused:** User data and API keys stay in user's LocalStorage; documents stay in your browser.
 
+### 5. ✨ Smart Onboarding (New)
+- **Interactive Wizard:** A "Spotlight" guided tour walks new users through setting up their API keys, models, and signatory defaults.
+- **Scroll Locking:** Keeps focus on the critical step, preventing users from getting lost.
+- **Smart Masks:** Allows direct interaction with focused elements (typing keys, selecting dropdowns) while dimming the rest of the interface.
+
 ## 💡 Why Thermal Hubble?
 
 Shipping Dangerous Goods (DG) is high-stakes. A single error can lead to:

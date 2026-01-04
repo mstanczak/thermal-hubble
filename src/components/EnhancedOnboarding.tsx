@@ -75,9 +75,24 @@ export function EnhancedOnboarding({ currentPage, onNavigate, isComplianceVerifi
         const apiKey = localStorage.getItem('gemini_api_key');
         const completed = localStorage.getItem('onboarding_completed');
 
-        if (isComplianceVerified && !apiKey && !completed) {
-            setIsVisible(true);
-            setStepIndex(0);
+        // Logic:
+        // 1. Compliance must be verified (user accepted disclaimer).
+        // 2. SHOW IF:
+        //    a. Explicit "reset" request (User clicked "Reason Onboarding" in nav).
+        //    b. First time user (No Key AND Not Completed/Skipped).
+
+        if (isComplianceVerified) {
+            if (completed === 'reset') {
+                // If manually reset, we show it regardless of API key presence
+                setIsVisible(true);
+                setStepIndex(0);
+                // Clear the reset flag so it doesn't loop on next reload (if they finish/skip)
+                localStorage.removeItem('onboarding_completed');
+            } else if (!apiKey && !completed) {
+                // Standard first-time flow
+                setIsVisible(true);
+                setStepIndex(0);
+            }
         }
     }, [isComplianceVerified]);
 
