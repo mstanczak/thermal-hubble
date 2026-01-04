@@ -9,33 +9,7 @@ interface OnboardingGuideProps {
     isComplianceVerified: boolean;
 }
 
-// --- Helpers for Arrow Rendering ---
-function getArrowDirection(placement: 'top' | 'bottom' | 'left' | 'right') {
-    switch (placement) {
-        case 'top': return 'down'; // Popover is TOP, so arrow points DOWN to target
-        case 'bottom': return 'up'; // Popover is BOTTOM, so arrow points UP to target
-        case 'left': return 'right';
-        case 'right': return 'left';
-    }
-}
 
-function getArrowPositionStyle(placement: 'top' | 'bottom' | 'left' | 'right', offset: number): React.CSSProperties {
-    // The arrow is 40x40. We need to center it on the edge.
-    // Offset is the center point relative to the popover edge.
-    const ARROW_SIZE = 40;
-    const CENTER_OFFSET = ARROW_SIZE / 2;
-
-    switch (placement) {
-        case 'top':
-            return { bottom: -30, left: offset - CENTER_OFFSET };
-        case 'bottom':
-            return { top: -30, left: offset - CENTER_OFFSET };
-        case 'left':
-            return { right: -30, top: offset - CENTER_OFFSET };
-        case 'right':
-            return { left: -30, top: offset - CENTER_OFFSET };
-    }
-}
 
 export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified }: OnboardingGuideProps) {
     // --- State & Refs (Must be top level) ---

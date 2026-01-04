@@ -1,33 +1,42 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AnimatePresence, motion } from 'framer-motion';
 import { hazmatFormSchema, type HazmatFormData } from '../lib/validation';
 import { CARRIERS, MODES, SERVICE_TYPES, COMMON_UN_NUMBERS } from '../data/regulations';
 import { HAZARD_CLASSES } from '../data/hazardClasses';
 import { PACKING_INSTRUCTIONS } from '../data/packingInstructions';
-import { validateShipmentWithGemini, getFieldSuggestions, type ValidationResult, type Suggestion } from '../lib/gemini';
 import { ValidationResultCard } from './ValidationResult';
-import { CheckCircle, Plane, Truck, Loader2, AlertCircle, Info, Sparkles, X } from 'lucide-react';
+import { CheckCircle, Plane, Truck, Loader2, AlertCircle, Sparkles, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { SDSUpload } from './SDSUpload';
 import { ApiKeyModal } from './ApiKeyModal';
+import { useAiSuggestions } from '../hooks/useAiSuggestions';
+import { useHazmatValidation } from '../hooks/useHazmatValidation';
+import { Tooltip } from './ui/Tooltip';
+
 interface HazmatFormProps {
     isSubmitDisabled?: boolean;
 }
 
 export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
-    const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [apiError, setApiError] = useState<string | null>(null);
     const [confidenceScores, setConfidenceScores] = useState<Record<string, number>>({});
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
-    // Suggestion State
-    const [activeSuggestionField, setActiveSuggestionField] = useState<string | null>(null);
-    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-    const [isSuggesting, setIsSuggesting] = useState(false);
+    // Custom Hooks
+    const {
+        suggestions,
+        isSuggesting,
+        activeSuggestionField,
+        getSuggestions,
+        clearSuggestions
+    } = useAiSuggestions();
 
+    const {
+        validationResult,
+        isLoading,
+        apiError,
+        validateShipment
+    } = useHazmatValidation();
 
     const {
         register,
@@ -148,59 +157,16 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
     }, [watch]);
 
     const onSubmit = async (data: HazmatFormData) => {
-        setApiError(null);
-        setValidationResult(null);
-        setIsLoading(true);
-
-        try {
-            const apiKey = localStorage.getItem('gemini_api_key');
-            const modelId = localStorage.getItem('gemini_model_validation') || 'gemini-2.5-flash';
-
-            if (!apiKey) {
-                setShowApiKeyModal(true);
-                setIsLoading(false);
-                return;
-            }
-
-            const result = await validateShipmentWithGemini(data, apiKey, modelId);
-            setValidationResult(result);
-        } catch (error: any) {
-            setApiError(error.message || "Failed to validate shipment. Please check your API key and try again.");
-            console.error(error);
-        } finally {
-            setIsLoading(false);
-        }
+        await validateShipment(data, setShowApiKeyModal);
     };
 
-    const handleGetSuggestions = async (fieldName: string) => {
-        setActiveSuggestionField(fieldName);
-        setIsSuggesting(true);
-        setSuggestions([]);
-
-        try {
-            const apiKey = localStorage.getItem('gemini_api_key');
-            const modelId = localStorage.getItem('gemini_model_suggestions') || 'gemini-2.5-flash';
-
-            if (!apiKey) {
-                setShowApiKeyModal(true);
-                setActiveSuggestionField(null);
-                return;
-            }
-
-            const currentData = watch();
-            const results = await getFieldSuggestions(currentData, fieldName, apiKey, modelId);
-            setSuggestions(results);
-        } catch (error) {
-            console.error("Failed to get suggestions", error);
-        } finally {
-            setIsSuggesting(false);
-        }
+    const handleGetSuggestions = (fieldName: string) => {
+        getSuggestions(watch(), fieldName, setShowApiKeyModal);
     };
 
     const applySuggestion = (fieldName: string, value: string) => {
         setValue(fieldName as any, value);
-        setActiveSuggestionField(null);
-        setSuggestions([]);
+        clearSuggestions();
         // Optimistically update confidence to 100 (user selected it)
         setConfidenceScores(prev => ({ ...prev, [fieldName]: 100 }));
     };
@@ -242,7 +208,7 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                                 AI Suggestions
                             </span>
                             <button
-                                onClick={() => setActiveSuggestionField(null)}
+                                onClick={clearSuggestions}
                                 className="text-gray-400 hover:text-gray-600"
                             >
                                 <X className="w-3 h-3" />
@@ -288,34 +254,6 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
         );
     };
 
-    const Tooltip = ({ text }: { text: string }) => {
-        const [show, setShow] = useState(false);
-        return (
-            <div
-                className="relative inline-block ml-1"
-                onMouseEnter={() => window.innerWidth >= 768 && setShow(true)}
-                onMouseLeave={() => window.innerWidth >= 768 && setShow(false)}
-                onClick={() => setShow(!show)}
-            >
-                <Info className="w-3.5 h-3.5 text-gray-400 cursor-help inline" />
-                <AnimatePresence>
-                    {show && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 5 }}
-                            className="absolute z-50 w-64 p-3 mt-2 text-xs text-white bg-gray-900 rounded-lg shadow-xl -left-2 top-full leading-relaxed"
-                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                        >
-                            {text}
-                            <div className="absolute w-2 h-2 bg-gray-900 transform rotate-45 -top-1 left-3"></div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        );
-    };
-
     return (
         <div className="space-y-8">
             <SDSUpload
@@ -335,7 +273,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Carrier
-                                <Tooltip text="Select the shipping carrier (FedEx or UPS) that will transport this hazardous material." />
+                                <Tooltip content="Select the shipping carrier (FedEx or UPS) that will transport this hazardous material.">
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                </Tooltip>
                             </label>
                             <select
                                 {...register('carrier')}
@@ -350,7 +290,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Transport Mode
-                                <Tooltip text="Choose Air for air freight (IATA regulations) or Ground for truck transport (DOT regulations). This determines which compliance rules apply." />
+                                <Tooltip content="Choose Air for air freight (IATA regulations) or Ground for truck transport (DOT regulations). This determines which compliance rules apply.">
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                </Tooltip>
                             </label>
                             <div className="flex gap-4">
                                 {MODES.map((m) => (
@@ -376,7 +318,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Service Type
-                                <Tooltip text="Select the specific shipping service (e.g., FedEx Priority Overnight, UPS Ground). Available options depend on carrier and mode." />
+                                <Tooltip content="Select the specific shipping service (e.g., FedEx Priority Overnight, UPS Ground). Available options depend on carrier and mode.">
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                </Tooltip>
                             </label>
                             <select
                                 {...register('service')}
@@ -394,7 +338,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                             <div className="flex-1">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Weight
-                                    <Tooltip text="Total gross weight of the package including packaging materials." />
+                                    <Tooltip content="Total gross weight of the package including packaging materials.">
+                                        <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                    </Tooltip>
                                 </label>
                                 <input
                                     type="number"
@@ -429,7 +375,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 UN Number
-                                <Tooltip text="Four-digit United Nations identification number for the hazardous material (e.g., UN1263). This is the primary classification code." />
+                                <Tooltip content="Four-digit United Nations identification number for the hazardous material (e.g., UN1263). This is the primary classification code.">
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                </Tooltip>
                                 {renderConfidenceBadge('unNumber')}
                             </label>
                             <input
@@ -449,7 +397,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Proper Shipping Name
-                                <Tooltip text="Official name used to identify the hazardous material in shipping documents. Must match the UN number classification." />
+                                <Tooltip content="Official name used to identify the hazardous material in shipping documents. Must match the UN number classification.">
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                </Tooltip>
                                 {renderConfidenceBadge('properShippingName')}
                             </label>
                             <input
@@ -462,7 +412,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                         <div>
                             <label className={clsx("block text-sm font-medium mb-1", isTechnicalNameRequired ? "text-gray-700" : "text-gray-400")}>
                                 Technical Name (if n.o.s.)
-                                <Tooltip text="Required when the proper shipping name includes 'n.o.s.' (not otherwise specified). Provide the chemical or technical name of the hazardous component." />
+                                <Tooltip content="Required when the proper shipping name includes 'n.o.s.' (not otherwise specified). Provide the chemical or technical name of the hazardous component.">
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                </Tooltip>
                                 {renderConfidenceBadge('technicalName')}
                             </label>
                             <input
@@ -482,7 +434,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Hazard Class
-                                    <Tooltip text="Primary hazard classification (e.g., 3 for flammable liquids, 8 for corrosives). Determines handling and packaging requirements." />
+                                    <Tooltip content="Primary hazard classification (e.g., 3 for flammable liquids, 8 for corrosives). Determines handling and packaging requirements.">
+                                        <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                    </Tooltip>
                                     {renderConfidenceBadge('hazardClass')}
                                 </label>
                                 <select
@@ -499,7 +453,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Packing Group
-                                    <Tooltip text="Indicates the degree of danger: I (high), II (medium), or III (low). Not all hazard classes require a packing group." />
+                                    <Tooltip content="Indicates the degree of danger: I (high), II (medium), or III (low). Not all hazard classes require a packing group.">
+                                        <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                    </Tooltip>
                                     {renderConfidenceBadge('packingGroup')}
                                 </label>
                                 <select
@@ -518,7 +474,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                             <div className="flex-1">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Net Quantity
-                                    <Tooltip text="Amount of hazardous material in the package (excluding packaging weight). Use the quantity calculator above for multiple units." />
+                                    <Tooltip content="Amount of hazardous material in the package (excluding packaging weight). Use the quantity calculator above for multiple units.">
+                                        <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                    </Tooltip>
                                 </label>
                                 <input
                                     type="number"
@@ -541,7 +499,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Emergency Phone (24hr)
-                                <Tooltip text="24-hour emergency contact number for incidents involving this shipment. Must be monitored at all times during transport." />
+                                <Tooltip content="24-hour emergency contact number for incidents involving this shipment. Must be monitored at all times during transport.">
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                </Tooltip>
                             </label>
                             <input
                                 {...register('emergencyPhone')}
@@ -554,7 +514,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Packaging Type Description
-                                <Tooltip text="Describe the outer packaging (e.g., '1 Fibreboard Box x 4 L' or '2 Steel Drums x 10 kg'). Include quantity and container type." />
+                                <Tooltip content="Describe the outer packaging (e.g., '1 Fibreboard Box x 4 L' or '2 Steel Drums x 10 kg'). Include quantity and container type.">
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                </Tooltip>
                                 {renderConfidenceBadge('packagingType')}
                             </label>
                             <input
@@ -577,7 +539,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Packing Instruction
-                                        <Tooltip text="IATA packing instruction number (e.g., 355, Y344) that specifies packaging requirements for air transport. Found in the IATA Dangerous Goods Regulations." />
+                                        <Tooltip content="IATA packing instruction number (e.g., 355, Y344) that specifies packaging requirements for air transport. Found in the IATA Dangerous Goods Regulations.">
+                                            <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                        </Tooltip>
                                         {renderConfidenceBadge('packingInstruction')}
                                     </label>
                                     <input
@@ -596,7 +560,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Signatory Name
-                                        <Tooltip text="Full name of the person certifying this shipment complies with regulations. This person is legally responsible for the declaration." />
+                                        <Tooltip content="Full name of the person certifying this shipment complies with regulations. This person is legally responsible for the declaration.">
+                                            <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                        </Tooltip>
                                     </label>
                                     <input
                                         {...register('signatoryName')}
@@ -607,7 +573,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Signatory Title
-                                        <Tooltip text="Job title or position of the person signing (e.g., 'Shipping Manager', 'Compliance Officer')." />
+                                        <Tooltip content="Job title or position of the person signing (e.g., 'Shipping Manager', 'Compliance Officer').">
+                                            <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                        </Tooltip>
                                     </label>
                                     <input
                                         {...register('signatoryTitle')}
@@ -618,7 +586,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Signatory Place
-                                        <Tooltip text="City and state/country where the declaration is signed (e.g., 'New York, NY')." />
+                                        <Tooltip content="City and state/country where the declaration is signed (e.g., 'New York, NY').">
+                                            <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                        </Tooltip>
                                     </label>
                                     <input
                                         {...register('signatoryPlace')}
@@ -648,7 +618,9 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Offeror Name
-                                        <Tooltip text="Name of the company or individual offering the hazardous material for ground transport. Required for DOT compliance." />
+                                        <Tooltip content="Name of the company or individual offering the hazardous material for ground transport. Required for DOT compliance.">
+                                            <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help inline ml-1" />
+                                        </Tooltip>
                                     </label>
                                     <input
                                         {...register('offerorName')}

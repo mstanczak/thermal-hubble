@@ -138,7 +138,7 @@ function App() {
     >
       <OnboardingGuide
         currentPage={currentPage}
-        onNavigate={(page) => setCurrentPage(page)}
+        onNavigate={(page) => setCurrentPage(page as any)}
         isComplianceVerified={isComplianceVerified}
       />
 
