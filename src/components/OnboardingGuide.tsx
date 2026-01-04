@@ -86,6 +86,7 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
     return (
         <AnimatePresence>
             {/* Step 1: Overlay for Settings Button */}
+            {/* Step 1: Overlay for Settings Button */}
             {step === 1 && settingsRect && (
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -93,69 +94,60 @@ export function OnboardingGuide({ currentPage, onNavigate, isComplianceVerified 
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 pointer-events-none"
                 >
-                    {/* Darken background slightly except the target? 
-                        For "Fun" vibe, maybe just a focused overlay without full modal backdrop 
-                        to keep it light. Let's use a spotlight effect or just the arrow.
-                    */}
-
-                    {/* Arrow and Text */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 20, y: 20 }}
-                        animate={{ opacity: 1, x: 0, y: 0 }}
-                        transition={{ delay: 0.5, type: 'spring' }}
+                    {/* Pulsing Beacon on the actual button */}
+                    <div
                         style={{
                             position: 'absolute',
-                            top: settingsRect.bottom + 20,
-                            right: window.innerWidth - settingsRect.right + 20,
+                            top: settingsRect.top + (settingsRect.height / 2) - 20,
+                            left: settingsRect.left + (settingsRect.width / 2) - 20,
+                            width: 40,
+                            height: 40,
                         }}
-                        className="pointer-events-auto bg-blue-600 text-white p-4 rounded-xl shadow-xl max-w-xs relative"
+                        className="pointer-events-none flex items-center justify-center"
                     >
-                        <div className="absolute -top-3 right-8 w-4 h-4 bg-blue-600 rotate-45" />
-                        <h3 className="font-bold text-lg mb-1">First things first! 🚀</h3>
-                        <p className="text-blue-100 text-sm mb-3">
-                            Let's power up your AI assistant by adding an API key.
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                    </div>
+
+                    {/* Simple Popover Bubble */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ delay: 0.2, type: 'spring' }}
+                        style={{
+                            position: 'absolute',
+                            top: settingsRect.bottom + 16,
+                            right: window.innerWidth - settingsRect.right, // Align right edges
+                        }}
+                        className="pointer-events-auto bg-blue-600 text-white p-5 rounded-xl shadow-xl max-w-xs w-72 relative origin-top-right"
+                    >
+                        {/* CSS Arrow pointing UP at the settings gear */}
+                        <div
+                            className="absolute -top-2 right-3 w-4 h-4 bg-blue-600 rotate-45"
+                            style={{ borderRadius: '2px' }}
+                        />
+
+                        <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                            Setup Required ⚙️
+                        </h3>
+                        <p className="text-blue-100 text-sm mb-4 leading-relaxed">
+                            To use the AI features, you need to add your free Google API Key in Settings.
                         </p>
-                        <div className="flex justify-between items-center">
+
+                        <div className="flex justify-between items-center pt-2 border-t border-blue-500/30">
                             <button
                                 onClick={handleSkip}
-                                className="text-xs text-blue-200 hover:text-white underline"
+                                className="text-xs text-blue-200 hover:text-white transition-colors"
                             >
-                                Skip
+                                Dismiss
                             </button>
                             <button
                                 onClick={() => onNavigate('settings')}
-                                className="px-3 py-1 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
+                                className="px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-50 transition-colors shadow-sm"
                             >
-                                Go to Settings
+                                Open Settings
                             </button>
                         </div>
-
-                        {/* Fun Curved Arrow SVG */}
-                        <svg
-                            className="absolute -top-16 -right-10 w-24 h-24 text-blue-500 pointer-events-none drop-shadow-md"
-                            viewBox="0 0 100 100"
-                            fill="none"
-                        >
-                            <motion.path
-                                d="M30,85 C30,85 70,85 90,50"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                initial={{ pathLength: 0 }}
-                                animate={{ pathLength: 1 }}
-                                transition={{ duration: 1, ease: "easeInOut" }}
-                            />
-                            <motion.path
-                                d="M82,38 L 90,50 L 78,58"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.8 }}
-                            />
-                        </svg>
                     </motion.div>
                 </motion.div>
             )}
