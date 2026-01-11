@@ -39,10 +39,38 @@ const STEPS = [
         action: "Keep Going"
     },
     {
-        id: 'autofill',
+        id: 'autofill-name',
         targetId: 'onboarding-signatory-input',
-        title: "Auto-Fill Defaults",
-        description: "Save time by setting default signatory details. You won't have to type them every time.",
+        title: "Signatory Name",
+        description: "The person signing the Dangerous Goods Declaration.",
+        action: "Next Field"
+    },
+    {
+        id: 'autofill-title',
+        targetId: 'onboarding-signatory-title',
+        title: "Signatory Title",
+        description: "Your job title (e.g., Shipping Manager) for the declaration.",
+        action: "Next Field"
+    },
+    {
+        id: 'autofill-place',
+        targetId: 'onboarding-signatory-place',
+        title: "Signatory Place",
+        description: "The city/location where shipments are signed.",
+        action: "Next Field"
+    },
+    {
+        id: 'autofill-phone',
+        targetId: 'onboarding-emergency-phone',
+        title: "Emergency Phone",
+        description: "24-hour emergency response number required on declarations.",
+        action: "Next Field"
+    },
+    {
+        id: 'autofill-offeror',
+        targetId: 'onboarding-offeror-name',
+        title: "Offeror Name",
+        description: "Company name responsible for the shipment.",
         action: "Almost Done"
     },
     {

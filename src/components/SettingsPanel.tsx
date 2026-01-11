@@ -5,6 +5,7 @@ import { Key, Eye, EyeOff, Trash2, CheckCircle, AlertCircle, Server, Plus, Chevr
 import type { MCPServerConfig } from '../lib/mcp';
 import { MCPClientManager } from '../lib/mcp';
 import clsx from 'clsx';
+import { Tooltip } from './ui/Tooltip';
 
 export function SettingsPanel() {
     const [apiKey, setApiKey] = useState('');
@@ -289,7 +290,12 @@ export function SettingsPanel() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Suggestions Model</label>
+                        <div className="flex items-center gap-2 mb-1">
+                            <label className="text-sm font-medium text-gray-700">Suggestions Model</label>
+                            <Tooltip content="Powers auto-complete for Proper Shipping Names, UN Numbers, and Packing Instructions.">
+                                <Info className="w-3.5 h-3.5 text-gray-400 hover:text-blue-600 transition-colors" />
+                            </Tooltip>
+                        </div>
                         <select
                             value={suggestionModel}
                             onChange={(e) => setSuggestionModel(e.target.value)}
@@ -306,7 +312,12 @@ export function SettingsPanel() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Validation Model</label>
+                        <div className="flex items-center gap-2 mb-1">
+                            <label className="text-sm font-medium text-gray-700">Validation Model</label>
+                            <Tooltip content="The core brain for checking shipment compliance against regulations (IATA/DOT).">
+                                <Info className="w-3.5 h-3.5 text-gray-400 hover:text-blue-600 transition-colors" />
+                            </Tooltip>
+                        </div>
                         <select
                             value={validationModel}
                             onChange={(e) => setValidationModel(e.target.value)}
@@ -322,7 +333,12 @@ export function SettingsPanel() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Screenshot Model</label>
+                        <div className="flex items-center gap-2 mb-1">
+                            <label className="text-sm font-medium text-gray-700">Screenshot Model</label>
+                            <Tooltip content="Vision-capable model that analyzes uploaded DG Declaration images.">
+                                <Info className="w-3.5 h-3.5 text-gray-400 hover:text-blue-600 transition-colors" />
+                            </Tooltip>
+                        </div>
                         <select
                             value={screenshotModel}
                             onChange={(e) => setScreenshotModel(e.target.value)}
@@ -338,7 +354,12 @@ export function SettingsPanel() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">OCR Model</label>
+                        <div className="flex items-center gap-2 mb-1">
+                            <label className="text-sm font-medium text-gray-700">OCR Model</label>
+                            <Tooltip content="Refining Engine: Tesseract.js performs the raw scan, then this AI model cleans and structures that messy text into usable knowledge.">
+                                <Info className="w-3.5 h-3.5 text-gray-400 hover:text-blue-600 transition-colors" />
+                            </Tooltip>
+                        </div>
                         <select
                             value={ocrModel}
                             onChange={(e) => setOcrModel(e.target.value)}
@@ -618,6 +639,7 @@ export function SettingsPanel() {
                                 onChange={(e) => setSignatoryTitle(e.target.value)}
                                 placeholder="e.g. Shipping Manager"
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                id="onboarding-signatory-title"
                             />
                         </div>
                         <div>
@@ -628,6 +650,7 @@ export function SettingsPanel() {
                                 onChange={(e) => setSignatoryPlace(e.target.value)}
                                 placeholder="e.g. New York, NY"
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                id="onboarding-signatory-place"
                             />
                         </div>
                         <div>
@@ -638,6 +661,7 @@ export function SettingsPanel() {
                                 onChange={(e) => setEmergencyPhone(e.target.value)}
                                 placeholder="e.g. +1 800-555-0199"
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                id="onboarding-emergency-phone"
                             />
                         </div>
                         <div>
@@ -648,6 +672,7 @@ export function SettingsPanel() {
                                 onChange={(e) => setOfferorName(e.target.value)}
                                 placeholder="e.g. ABC Logistics Inc."
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                id="onboarding-offeror-name"
                             />
                         </div>
                     </div>
