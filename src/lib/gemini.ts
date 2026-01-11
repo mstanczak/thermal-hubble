@@ -444,11 +444,18 @@ export async function getFieldSuggestions(
       
       Provide 1-3 recommendations for "${fieldName}".
       Sort by confidence (highest first).
+
+      ${fieldName === 'reportableQuantity' ? `
+      SPECIAL INSTRUCTION FOR REPORTABLE QUANTITY (RQ):
+      - Determine if the provided UN Number and Quantity constitutes a Reportable Quantity (RQ) under DOT regulations (49 CFR).
+      - E.g., if the substance is listed in the Hazardous Substances Table (172.101 App A) and the quantity per package exceeds the RQ threshold.
+      - Return "true" if it is an RQ, "false" if not (or if unsure/below threshold).
+      ` : ''}
       
       Return ONLY a JSON array of objects with this structure:
       [
         {
-          "value": "suggested value",
+          "value": "suggested value" ${fieldName === 'reportableQuantity' ? '(use "true" or "false")' : ''},
           "confidence": number (0-100),
           "reasoning": "brief explanation why"
         }

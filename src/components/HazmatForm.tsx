@@ -165,7 +165,11 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
     };
 
     const applySuggestion = (fieldName: string, value: string) => {
-        setValue(fieldName as any, value);
+        if (fieldName === 'reportableQuantity') {
+            setValue('reportableQuantity', value === 'true');
+        } else {
+            setValue(fieldName as any, value);
+        }
         clearSuggestions();
         // Optimistically update confidence to 100 (user selected it)
         setConfidenceScores(prev => ({ ...prev, [fieldName]: 100 }));
@@ -634,7 +638,13 @@ export function HazmatForm({ isSubmitDisabled = false }: HazmatFormProps) {
                                         {...register('reportableQuantity')}
                                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                     />
-                                    <label className="text-sm text-gray-700">Reportable Quantity (RQ)</label>
+                                    <label className="text-sm text-gray-700 flex items-center gap-1">
+                                        Reportable Quantity (RQ)
+                                        <Tooltip content="Means 'Major Environmental Threat'. If you ship more than a specific amount (e.g., 10 lbs) in one package, a spill becomes a federal emergency. Check this if you meet that threshold.">
+                                            <AlertCircle className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                                        </Tooltip>
+                                        {renderConfidenceBadge('reportableQuantity')}
+                                    </label>
                                 </div>
                             </div>
                         </div>
