@@ -314,7 +314,7 @@ export function DGValidator() {
                         )}
 
                         {/* Intelligence Footer */}
-                        {result.metadata && <ValidationIntelligence metadata={result.metadata} />}
+                        {result.metadata && <ValidationIntelligence metadata={result.metadata} issues={result.issues} />}
                     </div>
                 </div>
             )}

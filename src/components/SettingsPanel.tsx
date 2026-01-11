@@ -7,6 +7,46 @@ import { MCPClientManager } from '../lib/mcp';
 import clsx from 'clsx';
 import { Tooltip } from './ui/Tooltip';
 
+// Helper component for weight slider
+const WeightSlider = ({ weight, onChange }: { weight: number, onChange: (val: number) => void }) => {
+    const getSliderColor = (w: number) => {
+        if (w >= 100) return '#10b981'; // emerald-500
+        if (w >= 80) return '#3b82f6'; // blue-500
+        return '#9ca3af'; // gray-400
+    };
+
+    const percent = Math.min((weight / 500) * 100, 100);
+    const color = getSliderColor(weight);
+
+    return (
+        <div className="flex items-center gap-3 select-none">
+            <input
+                type="range"
+                min="0"
+                max="500"
+                step="5"
+                value={weight}
+                onChange={(e) => onChange(parseInt(e.target.value))}
+                style={{
+                    background: `linear-gradient(to right, ${color} 0%, ${color} ${percent}%, #e5e7eb ${percent}%, #e5e7eb 100%)`
+                }}
+                className={clsx(
+                    "w-48 h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500",
+                    // Reset default appearance to use our custom gradient
+                    "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-gray-200 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110",
+                    "[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-gray-200 [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:border"
+                )}
+            />
+            <div
+                className="w-12 py-0.5 text-center text-xs font-mono font-bold text-white rounded transition-colors duration-300"
+                style={{ backgroundColor: color }}
+            >
+                {weight}%
+            </div>
+        </div>
+    );
+};
+
 export function SettingsPanel() {
     const [apiKey, setApiKey] = useState('');
     const [showKey, setShowKey] = useState(false);
@@ -49,45 +89,7 @@ export function SettingsPanel() {
         setExpandedDocIds(newSet);
     };
 
-    // Helper component for weight slider
-    const WeightSlider = ({ weight, onChange }: { weight: number, onChange: (val: number) => void }) => {
-        const getSliderColor = (w: number) => {
-            if (w >= 100) return '#10b981'; // emerald-500
-            if (w >= 80) return '#3b82f6'; // blue-500
-            return '#9ca3af'; // gray-400
-        };
 
-        const percent = Math.min((weight / 500) * 100, 100);
-        const color = getSliderColor(weight);
-
-        return (
-            <div className="flex items-center gap-3 select-none">
-                <input
-                    type="range"
-                    min="0"
-                    max="500"
-                    step="5"
-                    value={weight}
-                    onChange={(e) => onChange(parseInt(e.target.value))}
-                    style={{
-                        background: `linear-gradient(to right, ${color} 0%, ${color} ${percent}%, #e5e7eb ${percent}%, #e5e7eb 100%)`
-                    }}
-                    className={clsx(
-                        "w-48 h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500",
-                        // Reset default appearance to use our custom gradient
-                        "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-gray-200 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110",
-                        "[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-gray-200 [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:border"
-                    )}
-                />
-                <div
-                    className="w-12 py-0.5 text-center text-xs font-mono font-bold text-white rounded transition-colors duration-300"
-                    style={{ backgroundColor: color }}
-                >
-                    {weight}%
-                </div>
-            </div>
-        );
-    };
 
     // Track which URL is currently being tested
     const [testingUrl, setTestingUrl] = useState<string | null>(null);
@@ -189,11 +191,12 @@ export function SettingsPanel() {
             const manager = MCPClientManager.getInstance();
             await manager.connectToServer(url);
             setMcpTestResult({ url, success: true, msg: "Connected successfully!" });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Connection failed. Ensure server supports SSE.";
             setMcpTestResult({
                 url,
                 success: false,
-                msg: err.message || "Connection failed. Ensure server supports SSE."
+                msg: errorMessage
             });
         } finally {
             setTestingUrl(null);
