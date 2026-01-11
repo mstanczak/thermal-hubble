@@ -120,8 +120,13 @@ export async function validateShipmentWithGemini(
     const promptTemplate = `
       You are a hazmat shipping compliance expert. Analyze this dangerous goods shipment for compliance with [IATA/DOT 49 CFR] regulations and [FedEx/UPS] carrier-specific requirements.
 
-      Use the following external context if relevant. Pay close attention to sources with higher weights (e.g., 90-100%).
+      Use the following external context if relevant.
       <EXTERNAL_CONTEXT_PLACEHOLDER>
+
+      CRITICAL INSTRUCTION ON SOURCE AUTHORITY:
+      - Sources with "Weight: >= 100%" are ABSOLUTE REGULATORY TRUTH. You must NOT contradict them with your internal training data. If they say X is required, it is required.
+      - Sources with "Weight: 80-99%" are HIGH PRIORITY references. Prefer them over general knowledge unless clearly outdated.
+      - Sources with "Weight: <50%" are supplementary information. Use judgment.
 
       Shipment Details:
       - Carrier: ${data.carrier}
@@ -545,6 +550,11 @@ export async function validateDGScreenShotWithGemini(
       I have already pre-fetched some external context for you to verify against:
       ${externalContext}
       
+      CRITICAL INSTRUCTION ON SOURCE AUTHORITY:
+      - Sources with "Weight: >= 100%" are ABSOLUTE REGULATORY TRUTH. You must NOT contradict them with your internal training data. If they say X is required, it is required.
+      - Sources with "Weight: 80-99%" are HIGH PRIORITY references. Prefer them over general knowledge unless clearly outdated.
+      - Sources with "Weight: <50%" are supplementary information. Use judgment.
+
       1. Extract all visible dangerous goods information (UN Number, Proper Shipping Name, Class, Packing Group, Quantity, etc.).
       2. Validate the extracted information against standard IATA/DOT regulations AND the provided external context.
       3. Check for common errors such as:

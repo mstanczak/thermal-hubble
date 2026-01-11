@@ -35,8 +35,59 @@ export function SettingsPanel() {
     ];
 
     const [mcpServers, setMcpServers] = useState<MCPServerConfig[]>([]);
-    const [newMcpUrl, setNewMcpUrl] = useState('');
     const [newMcpName, setNewMcpName] = useState('');
+    const [newMcpUrl, setNewMcpUrl] = useState('http://localhost:8000/sse');
+    const [expandedDocIds, setExpandedDocIds] = useState<Set<string>>(new Set());
+
+    const toggleDocExpansion = (id: string, expanded: boolean) => {
+        const newSet = new Set(expandedDocIds);
+        if (expanded) {
+            newSet.add(id);
+        } else {
+            newSet.delete(id);
+        }
+        setExpandedDocIds(newSet);
+    };
+
+    // Helper component for weight slider
+    const WeightSlider = ({ weight, onChange }: { weight: number, onChange: (val: number) => void }) => {
+        const getSliderColor = (w: number) => {
+            if (w >= 100) return '#10b981'; // emerald-500
+            if (w >= 80) return '#3b82f6'; // blue-500
+            return '#9ca3af'; // gray-400
+        };
+
+        const percent = Math.min((weight / 500) * 100, 100);
+        const color = getSliderColor(weight);
+
+        return (
+            <div className="flex items-center gap-3 select-none">
+                <input
+                    type="range"
+                    min="0"
+                    max="500"
+                    step="5"
+                    value={weight}
+                    onChange={(e) => onChange(parseInt(e.target.value))}
+                    style={{
+                        background: `linear-gradient(to right, ${color} 0%, ${color} ${percent}%, #e5e7eb ${percent}%, #e5e7eb 100%)`
+                    }}
+                    className={clsx(
+                        "w-48 h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500",
+                        // Reset default appearance to use our custom gradient
+                        "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-gray-200 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110",
+                        "[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-gray-200 [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:border"
+                    )}
+                />
+                <div
+                    className="w-12 py-0.5 text-center text-xs font-mono font-bold text-white rounded transition-colors duration-300"
+                    style={{ backgroundColor: color }}
+                >
+                    {weight}%
+                </div>
+            </div>
+        );
+    };
 
     // Track which URL is currently being tested
     const [testingUrl, setTestingUrl] = useState<string | null>(null);
@@ -245,6 +296,12 @@ export function SettingsPanel() {
         setRulePhysicalLabels(false);
         setStatus('cleared');
         setTimeout(() => setStatus('idle'), 2000);
+    };
+
+    const handleMcpWeightChange = (index: number, weight: number) => {
+        const updated = [...mcpServers];
+        updated[index].weight = weight;
+        setMcpServers(updated);
     };
 
     return (
@@ -494,34 +551,64 @@ export function SettingsPanel() {
                         {mcpServers.map((server, idx) => (
                             <div key={idx} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className="flex items-center gap-3 overflow-hidden flex-1">
                                         <input
                                             type="checkbox"
                                             checked={server.enabled}
                                             onChange={() => toggleMcpServer(idx)}
                                             className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                                         />
-                                        <div className="min-w-0">
+                                        <div className="min-w-0 flex-1">
                                             <p className="font-medium text-sm text-gray-900 truncate">{server.name}</p>
                                             <p className="text-xs text-gray-500 truncate">{server.url}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => testMcpConnection(server.url)}
-                                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                            title="Test Connection"
-                                            disabled={testingUrl === server.url}
-                                        >
-                                            <RefreshCw className={clsx("w-4 h-4", testingUrl === server.url && "animate-spin")} />
-                                        </button>
-                                        <button
-                                            onClick={() => removeMcpServer(idx)}
-                                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                            title="Remove Server"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1">
+                                                <label className="text-xs font-medium text-gray-500">Weight:</label>
+                                                <Tooltip content={
+                                                    <div className="space-y-2 p-1">
+                                                        <p className="font-bold border-b border-gray-500 pb-1 mb-1">AI Authority Rubric</p>
+                                                        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-xs">
+                                                            <span className="font-mono text-emerald-300">≥ 100%</span>
+                                                            <span><strong>Absolute Truth.</strong> The AI will obey this source blindly, overriding its own internal knowledge.</span>
+
+                                                            <span className="font-mono text-blue-300">80-99%</span>
+                                                            <span><strong>High Authority.</strong> Strongly preferred, but the AI may overrule if detecting obvious errors.</span>
+
+                                                            <span className="font-mono text-gray-400">&lt; 50%</span>
+                                                            <span><strong>Reference.</strong> Used for context but generally subservient to standard regulations.</span>
+                                                        </div>
+                                                    </div>
+                                                }>
+                                                    <Info className="w-3 h-3 text-gray-400 hover:text-blue-500 cursor-help" />
+                                                </Tooltip>
+                                            </div>
+                                            <WeightSlider
+                                                weight={server.weight || 100}
+                                                onChange={(val) => handleMcpWeightChange(idx, val)}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => testMcpConnection(server.url)}
+                                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                title="Test Connection"
+                                                disabled={testingUrl === server.url}
+                                            >
+                                                <RefreshCw className={clsx("w-4 h-4", testingUrl === server.url && "animate-spin")} />
+                                            </button>
+                                            <button
+                                                onClick={() => removeMcpServer(idx)}
+                                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                title="Remove Server"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 {/* Per-server test result */}
@@ -571,39 +658,77 @@ export function SettingsPanel() {
 
                     <div className="space-y-3">
                         {documents.map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <div className="flex items-center gap-3 overflow-hidden flex-1">
-                                    <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                    <div className="min-w-0">
-                                        <p className="font-medium text-sm text-gray-900 truncate" title={doc.name}>{doc.name}</p>
-                                        <p className="text-xs text-gray-500 truncate">{(doc.content.length / 1024).toFixed(1)} KB extracted</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <label className="text-xs font-medium text-gray-500">Weight:</label>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                value={doc.weight}
-                                                onChange={(e) => handleDocumentWeightChange(doc.id, parseInt(e.target.value) || 0)}
-                                                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded text-right pr-6"
-                                            />
-                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                            <div key={doc.id} className="flex flex-col rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+                                <div className="flex items-center justify-between p-3">
+                                    <div className="flex items-center gap-3 overflow-hidden flex-1">
+                                        <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="font-medium text-sm text-gray-900 truncate" title={doc.name}>{doc.name}</p>
+                                            <p className="text-xs text-gray-500 truncate">{(doc.content.length / 1024).toFixed(1)} KB extracted</p>
                                         </div>
                                     </div>
 
-                                    <button
-                                        onClick={() => handleDeleteDocument(doc.id)}
-                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                        title="Remove Document"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1">
+                                                <label className="text-xs font-medium text-gray-500">Weight:</label>
+                                                <Tooltip content={
+                                                    <div className="space-y-2 p-1">
+                                                        <p className="font-bold border-b border-gray-500 pb-1 mb-1">AI Authority Rubric</p>
+                                                        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-xs">
+                                                            <span className="font-mono text-emerald-300">≥ 100%</span>
+                                                            <span><strong>Absolute Truth.</strong> The AI will obey this source blindly, overriding its own internal knowledge.</span>
+
+                                                            <span className="font-mono text-blue-300">80-99%</span>
+                                                            <span><strong>High Authority.</strong> Strongly preferred, but the AI may overrule if detecting obvious errors.</span>
+
+                                                            <span className="font-mono text-gray-400">&lt; 50%</span>
+                                                            <span><strong>Reference.</strong> Used for context but generally subservient to standard regulations.</span>
+                                                        </div>
+                                                    </div>
+                                                }>
+                                                    <Info className="w-3 h-3 text-gray-400 hover:text-blue-500 cursor-help" />
+                                                </Tooltip>
+                                            </div>
+                                            <WeightSlider
+                                                weight={doc.weight}
+                                                onChange={(val) => handleDocumentWeightChange(doc.id, val)}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => toggleDocExpansion(doc.id, !expandedDocIds.has(doc.id))}
+                                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                title={expandedDocIds.has(doc.id) ? "Hide Content" : "View Extracted Text"}
+                                            >
+                                                {expandedDocIds.has(doc.id) ? (
+                                                    <ChevronUp className="w-4 h-4" />
+                                                ) : (
+                                                    <Eye className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteDocument(doc.id)}
+                                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                title="Remove Document"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
+                                {expandedDocIds.has(doc.id) && (
+                                    <div className="border-t border-gray-200 bg-white p-3 animate-in slide-in-from-top-2">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Raw Extracted Content</span>
+                                            <span className="text-xs text-gray-400 font-mono">{doc.content.length} chars</span>
+                                        </div>
+                                        <pre className="text-xs font-mono text-gray-600 whitespace-pre-wrap break-all bg-gray-50 p-2 rounded border border-gray-100 max-h-60 overflow-y-auto">
+                                            {doc.content}
+                                        </pre>
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {documents.length === 0 && (

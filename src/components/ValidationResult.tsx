@@ -1,5 +1,5 @@
 import type { ValidationResult, ValidationIssue, ValidationMetadata } from '../lib/gemini';
-import { CheckCircle, AlertTriangle, Info, XCircle, ChevronDown, ChevronUp, Database, FileText, BrainCircuit } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Info, XCircle, ChevronDown, ChevronUp, Database, FileText, BrainCircuit, Zap } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
 import { Tooltip } from './ui/Tooltip';
@@ -10,37 +10,51 @@ interface ValidationResultProps {
 
 import type { SourceContext } from '../lib/mcp';
 
-function SourceItem({ source }: { source: SourceContext }) {
+function SourceItem({ source, isActive }: { source: SourceContext, isActive: boolean }) {
     const [showContent, setShowContent] = useState(false);
 
     return (
-        <div className="border border-gray-100 rounded-md bg-gray-50 overflow-hidden">
+        <div className={clsx(
+            "border rounded-md overflow-hidden transition-all",
+            isActive ? "bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200" : "bg-gray-50 border-gray-100"
+        )}>
             <div className="flex items-center justify-between p-2">
-                <div className="flex items-center gap-2 overflow-hidden">
+                <div className="flex items-center gap-2 overflow-hidden flex-1">
                     {source.sourceType === 'MCP' ? (
-                        <Database className="w-3.5 h-3.5 text-purple-500" />
+                        <Database className={clsx("w-3.5 h-3.5", isActive ? "text-indigo-600" : "text-purple-500")} />
                     ) : (
-                        <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                        <FileText className={clsx("w-3.5 h-3.5", isActive ? "text-indigo-600" : "text-indigo-500")} />
                     )}
-                    <span className="truncate font-medium text-gray-700" title={source.sourceName}>{source.sourceName}</span>
+                    <span className="truncate font-medium text-gray-700 text-sm" title={source.sourceName}>{source.sourceName}</span>
+                    {isActive && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-white px-1.5 py-0.5 rounded-full border border-indigo-100 shadow-sm">
+                            <Zap className="w-3 h-3 fill-indigo-600" />
+                            Active
+                        </span>
+                    )}
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                    <span className="text-gray-500">{source.sourceType}</span>
-                    <Tooltip content="AI Authority Weight indicates how much authority the AI gives to this source. 100% = Absolute Truth (overrides AI knowledge). 0% = Ignored.">
-                        <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-mono cursor-help">
-                            {source.weight}%
-                        </span>
+                    <Tooltip content={`AI Authority Weight: ${source.weight}%\n\nThe AI considers this source ${source.weight >= 100 ? 'Absolute Truth' : 'Reference Material'}. Higher weight means the AI is more likely to use this ruleset over its general knowledge.`}>
+                        <div className="flex items-center gap-1 cursor-help">
+                            <span className="text-gray-400 text-xs">Authority:</span>
+                            <span className={clsx(
+                                "px-1.5 py-0.5 rounded-md font-mono font-medium",
+                                source.weight >= 100 ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"
+                            )}>
+                                {source.weight}%
+                            </span>
+                        </div>
                     </Tooltip>
                     <button
                         onClick={() => setShowContent(!showContent)}
                         className="ml-2 text-blue-600 hover:text-blue-800 text-[10px] font-medium"
                     >
-                        {showContent ? "Hide Data" : "View Data"}
+                        {showContent ? "Hide" : "View"}
                     </button>
                 </div>
             </div>
             {showContent && (
-                <div className="p-2 bg-gray-100 border-t border-gray-200">
+                <div className="p-2 bg-white border-t border-gray-200">
                     <pre className="text-[10px] font-mono text-gray-600 whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
                         {source.content}
                     </pre>
@@ -50,7 +64,7 @@ function SourceItem({ source }: { source: SourceContext }) {
     );
 }
 
-export function ValidationIntelligence({ metadata }: { metadata: ValidationMetadata }) {
+export function ValidationIntelligence({ metadata, issues }: { metadata: ValidationMetadata, issues: ValidationIssue[] }) {
     const [expanded, setExpanded] = useState(false);
     const [showFullPrompt, setShowFullPrompt] = useState(false);
 
@@ -59,6 +73,18 @@ export function ValidationIntelligence({ metadata }: { metadata: ValidationMetad
     const truncatedPrompt = metadata.promptTemplate.length > 500
         ? metadata.promptTemplate.substring(0, 500) + "..."
         : metadata.promptTemplate;
+
+    // Identify active contributors based on whether their name appears in the issue explanation
+    const activeSourceNames = new Set<string>();
+    issues.forEach(issue => {
+        if (issue.explanation) {
+            metadata.sourcesUsed.forEach(source => {
+                if (issue.explanation?.includes(source.sourceName)) {
+                    activeSourceNames.add(source.sourceName);
+                }
+            });
+        }
+    });
 
     return (
         <div className="mt-8 border-t border-gray-200 pt-6">
@@ -81,7 +107,11 @@ export function ValidationIntelligence({ metadata }: { metadata: ValidationMetad
                                 <p className="text-sm text-gray-500 italic">No external context or local documents were used for this analysis. (Pure model knowledge)</p>
                             ) : (
                                 metadata.sourcesUsed.map((source, idx) => (
-                                    <SourceItem key={idx} source={source} />
+                                    <SourceItem
+                                        key={idx}
+                                        source={source}
+                                        isActive={activeSourceNames.has(source.sourceName)}
+                                    />
                                 ))
                             )}
                         </div>
@@ -252,7 +282,7 @@ export function ValidationResultCard({ result }: ValidationResultProps) {
             </div>
 
             {/* Intelligence Footer */}
-            {result.metadata && <ValidationIntelligence metadata={result.metadata} />}
+            {result.metadata && <ValidationIntelligence metadata={result.metadata} issues={result.issues} />}
         </div>
     );
 }
